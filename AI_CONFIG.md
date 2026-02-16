@@ -14,6 +14,10 @@
 **Default Pool Size:** 5 workers (expandable on request)
 **Specialization:** Code implementation, bug fixes, refactoring, test writing
 
+**Note:** Specialization can be customized. Tell the agent:
+"Change Codex workers to focus on [your custom specialty]"
+Agent will update this file and log the decision.
+
 **Enabled Workers (Default Set):**
 - [ ] Codex-Worker-1
 - [ ] Codex-Worker-2
@@ -43,6 +47,10 @@
 **Default Pool Size:** 5 workers (expandable on request)
 **Specialization:** Architecture design, API design, planning, documentation
 
+**Note:** Specialization can be customized. Tell the agent:
+"Change Claude workers to also handle implementation"
+Agent will update this file and log the decision.
+
 **Enabled Workers (Default Set):**
 - [ ] Claude-Worker-1
 - [ ] Claude-Worker-2
@@ -71,6 +79,10 @@
 **Status:** DISABLED
 **Default Pool Size:** 5 workers (expandable on request)
 **Specialization:** Cross-validation, alternative approaches, edge case discovery
+
+**Note:** Specialization can be customized. Tell the agent:
+"Change Gemini workers to focus on testing and QA"
+Agent will update this file and log the decision.
 
 **Enabled Workers (Default Set):**
 - [ ] Gemini-Worker-1

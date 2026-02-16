@@ -42,16 +42,20 @@ FRAMEWORK CAPABILITIES:
 AVAILABLE WORKER LANES (currently all DISABLED):
 
 📦 Codex Workers - Code Implementation
-   • Specialty: Code, tests, refactoring, bug fixes
+   • Specialty: Code, tests, refactoring, bug fixes (customizable)
    • Default: 5 workers (expandable to 10, 15+ on request)
 
 🎨 Claude Workers - Design & Planning
-   • Specialty: Architecture, API design, documentation, planning
+   • Specialty: Architecture, API design, documentation, planning (customizable)
    • Default: 5 workers (expandable to 10, 15+ on request)
 
 🔬 Gemini Workers - Supplemental Analysis
-   • Specialty: Cross-validation, alternatives, edge cases
+   • Specialty: Cross-validation, alternatives, edge cases (customizable)
    • Default: 5 workers (expandable to 10, 15+ on request)
+
+   Note: Worker specializations can be customized per-project.
+   User can say "Change Claude to handle implementation too" and you'll update
+   AI_CONFIG.md, AGENTS.md, and log in DECISIONS.md.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -102,7 +106,25 @@ Based on user's choice, update `AI_CONFIG.md`:
 1. Set status to ENABLED/DISABLED for each lane
 2. Check the appropriate worker boxes
 3. Update pool size counts
-4. Save the file
+4. If user requested custom specializations, update the "Specialization" field
+5. Save the file
+
+**If user customizes worker specializations:**
+
+Example:
+```
+User: "Make Claude workers handle implementation too, not just design"
+
+Update AI_CONFIG.md:
+### Claude Workers (Design/Planning)
+**Specialization:** Code implementation, architecture, API design, planning
+
+Log in DECISIONS.md:
+## 2026-XX-XX: Customized Claude Worker Lane
+**Context:** User requested Claude workers handle implementation
+**Decision:** Claude lane now covers code implementation + design
+**Rationale:** Project needs design-aware implementation
+```
 
 **Example update:**
 ```markdown

@@ -198,6 +198,43 @@ That's it! The agent will:
 
 **Total:** 15 workers default (expandable based on project needs)
 
+---
+
+### 🔧 Customizing Worker Specializations
+
+**These specialties are NOT hardcoded.** You can customize worker lanes for your project.
+
+**Simple command to agent:**
+
+```
+"Change Claude workers to also handle implementation, not just design."
+```
+
+**Or:**
+
+```
+"Redefine worker lanes:
+- Codex: Backend implementation only
+- Claude: Frontend implementation + design
+- Gemini: Testing and quality assurance"
+```
+
+**Agent will:**
+1. Update `AI_CONFIG.md` with new specializations
+2. Update `AGENTS.md` with lane definitions
+3. Log the change in `DECISIONS.md`
+4. Keep it persistent for this project
+
+**Example customization:**
+```
+You: "I want Claude workers to do implementation work, not just design"
+Agent: Updates AI_CONFIG.md:
+       Claude Lane: Code implementation, design, architecture
+       (instead of just design/planning)
+Agent: Logs decision in DECISIONS.md
+Agent: Continues with new lane definition
+```
+
 **See:** [CONFIGURATION.md](CONFIGURATION.md) for presets and sizing guidance
 
 ---

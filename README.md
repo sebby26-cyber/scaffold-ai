@@ -504,7 +504,7 @@ User approval required before advancing phases. Prevents AI from racing ahead or
 
 ## Production Validation
 
-**Extracted from:** krov/repo - A control-plane-first personal agent runtime with governed skill execution, multi-channel messaging, and companion personalization.
+**Extracted from:** krov - A control-plane-first personal agent runtime with governed skill execution, multi-channel messaging, and companion personalization.
 
 **Proven in:**
 - ✅ 5 phases executed (Foundation → Ship Readiness)
@@ -514,50 +514,6 @@ User approval required before advancing phases. Prevents AI from racing ahead or
 - ✅ 100+ decision log entries
 - ✅ Worker orchestration (15-worker pool tested)
 - ✅ Multi-week gaps (context persisted)
-
-**This is not theoretical. This is battle-tested.**
-
----
-
-## Configuration Presets
-
-### Preset 1: Solo Developer
-
-```yaml
-Workers: Lead only (0 workers)
-Use case: Small projects, learning framework
-Complexity: Minimal
-Timeline: <1 month
-```
-
-### Preset 2: Code Focus
-
-```yaml
-Workers: 3-5 Codex (code implementation)
-Use case: Clear requirements, implementation-heavy
-Complexity: Low-Medium
-Timeline: 1-2 months
-```
-
-### Preset 3: Design + Code
-
-```yaml
-Workers: 3 Codex + 2 Claude (balanced)
-Use case: Most projects
-Complexity: Medium
-Timeline: 2-4 months
-```
-
-### Preset 4: Large Project
-
-```yaml
-Workers: 5 Codex + 5 Claude + 3 Gemini (13 total)
-Use case: Complex architecture, aggressive timeline
-Complexity: High
-Timeline: 4+ months
-```
-
-**See:** [CONFIGURATION.md](CONFIGURATION.md) for detailed presets
 
 ---
 
@@ -666,14 +622,14 @@ MIT License - See [LICENSE](LICENSE) for details
 
 ## Credits
 
-**Extracted from:** krov/repo - A control-plane-first personal agent runtime with governed AI execution, multi-channel messaging (Telegram/Discord/Slack/WhatsApp/Signal/iMessage/Teams/SMS), tiered skill ecosystem (OpenClaw/ClawHub compatible), and companion-like personalization with governed memory
+**Extracted from:** krov - A control-plane-first personal agent runtime with governed AI execution, multi-channel messaging (Telegram/Discord/Slack/WhatsApp/Signal/iMessage/Teams/SMS), tiered skill ecosystem (OpenClaw/ClawHub compatible), and companion-like personalization with governed memory
 
 **Framework Version:** 1.0
 **Release Date:** 2026-02-16
 **Extraction Agent:** Claude Sonnet 4.5
 
 **Acknowledgments:**
-- Original krov/repo project for proving framework viability
+- Original krov project for proving framework viability
 - Lead-conductor pattern for preventing AI chaos
 - Append-only decision log for preserving context
 - Resume checklist for enabling handoff

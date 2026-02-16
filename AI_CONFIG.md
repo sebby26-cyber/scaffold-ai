@@ -13,9 +13,10 @@
 **Status:** DISABLED
 **Default Pool Size:** 5 workers (expandable on request)
 **Specialization:** Code implementation, bug fixes, refactoring, test writing
+**Model:** (not specified - uses default)
 
-**Note:** Specialization can be customized. Tell the agent:
-"Change Codex workers to focus on [your custom specialty]"
+**Note:** Specialization and model can be customized. Tell the agent:
+"Use gpt-5.1-codex-mini for Codex workers"
 Agent will update this file and log the decision.
 
 **Enabled Workers (Default Set):**
@@ -46,9 +47,10 @@ Agent will update this file and log the decision.
 **Status:** DISABLED
 **Default Pool Size:** 5 workers (expandable on request)
 **Specialization:** Architecture design, API design, planning, documentation
+**Model:** (not specified - uses default)
 
-**Note:** Specialization can be customized. Tell the agent:
-"Change Claude workers to also handle implementation"
+**Note:** Specialization and model can be customized. Tell the agent:
+"Use claude-sonnet-4.5 for Claude workers"
 Agent will update this file and log the decision.
 
 **Enabled Workers (Default Set):**
@@ -79,9 +81,10 @@ Agent will update this file and log the decision.
 **Status:** DISABLED
 **Default Pool Size:** 5 workers (expandable on request)
 **Specialization:** Cross-validation, alternative approaches, edge case discovery
+**Model:** (not specified - uses default)
 
-**Note:** Specialization can be customized. Tell the agent:
-"Change Gemini workers to focus on testing and QA"
+**Note:** Specialization and model can be customized. Tell the agent:
+"Use gemini-2.0-flash for Gemini workers"
 Agent will update this file and log the decision.
 
 **Enabled Workers (Default Set):**

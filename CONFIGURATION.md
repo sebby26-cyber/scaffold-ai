@@ -290,6 +290,21 @@ Pool Size: 5
 
 ---
 
+## Model Selection
+
+**You can specify different models per worker lane.**
+
+**Don't run expensive reasoning models on trivial tasks!**
+
+Tell the agent which models to use:
+- `"Use gpt-5.1-codex-mini for Codex workers"`
+- `"Use claude-sonnet-4.5 for Claude workers"`
+- `"Use gemini-2.0-flash for Gemini workers"`
+
+Agent will update AI_CONFIG.md and log the decision.
+
+---
+
 ## Configuration Decision Factors
 
 ### Project Size

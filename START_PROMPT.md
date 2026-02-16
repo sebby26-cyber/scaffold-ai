@@ -44,18 +44,25 @@ AVAILABLE WORKER LANES (currently all DISABLED):
 📦 Codex Workers - Code Implementation
    • Specialty: Code, tests, refactoring, bug fixes (customizable)
    • Default: 5 workers (expandable to 10, 15+ on request)
+   • Model: Configurable (use smaller models to save costs)
 
 🎨 Claude Workers - Design & Planning
    • Specialty: Architecture, API design, documentation, planning (customizable)
    • Default: 5 workers (expandable to 10, 15+ on request)
+   • Model: Configurable (use reasoning models for complex decisions)
 
 🔬 Gemini Workers - Supplemental Analysis
    • Specialty: Cross-validation, alternatives, edge cases (customizable)
    • Default: 5 workers (expandable to 10, 15+ on request)
+   • Model: Configurable (use fast/flash models for quick validation)
 
-   Note: Worker specializations can be customized per-project.
-   User can say "Change Claude to handle implementation too" and you'll update
-   AI_CONFIG.md, AGENTS.md, and log in DECISIONS.md.
+   Note: Worker specializations AND models can be customized per-project.
+   Examples:
+   - "Use gpt-5.1-codex-mini for Codex workers to save API costs"
+   - "Configure Claude workers with claude-sonnet-4.5 for reasoning"
+   - "Use gemini-2.0-flash for Gemini - fast and cheap validation"
+
+   You'll update AI_CONFIG.md and log in DECISIONS.md.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -82,7 +89,15 @@ Please tell me:
 • How many Claude workers? (0-5 default, or more if needed)
 • How many Gemini workers? (0-5 default, or more if needed)
 
-I'll update AI_CONFIG.md based on your choice.
+OPTIONAL - Model Selection (to save API costs):
+• Which model for Codex workers? (e.g., gpt-5.1-codex-mini for simple tasks)
+• Which model for Claude workers? (e.g., claude-sonnet-4.5 for reasoning)
+• Which model for Gemini workers? (e.g., gemini-2.0-flash for fast validation)
+• Or use defaults?
+
+Tip: Use smaller/faster models for simple tasks to reduce costs!
+
+I'll update AI_CONFIG.md based on your choices.
 ```
 
 ---
@@ -131,6 +146,7 @@ Log in DECISIONS.md:
 ### Codex Workers (Code Implementation)
 **Status:** ENABLED
 **Default Pool Size:** 5 workers (expandable on request)
+**Model:** gpt-5.1-codex-mini (for cost optimization)
 
 **Enabled Workers (Default Set):**
 - [x] Codex-Worker-1
@@ -139,6 +155,8 @@ Log in DECISIONS.md:
 - [ ] Codex-Worker-4
 - [ ] Codex-Worker-5
 ```
+
+**If user specifies models, update the Model field accordingly.**
 
 ---
 

@@ -235,6 +235,34 @@ Agent: Logs decision in DECISIONS.md
 Agent: Continues with new lane definition
 ```
 
+---
+
+### 💰 Model Selection for Workers
+
+**You can specify different models per worker lane.**
+
+**Don't run expensive reasoning models on trivial tasks!**
+
+**Simple command to agent:**
+
+```
+"Use gpt-5.1-codex-mini for Codex workers."
+```
+
+**Or specify per lane:**
+
+```
+"Configure models:
+- Codex: gpt-5.1-codex-mini
+- Claude: claude-sonnet-4.5
+- Gemini: gemini-2.0-flash"
+```
+
+**Agent will:**
+1. Update `AI_CONFIG.md` with model specifications
+2. Log the decision in `DECISIONS.md`
+3. Use specified models for worker deployment
+
 **See:** [CONFIGURATION.md](CONFIGURATION.md) for presets and sizing guidance
 
 ---

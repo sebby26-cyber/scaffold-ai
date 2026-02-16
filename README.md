@@ -112,7 +112,9 @@ That's it! The agent will:
 6. ✅ Request your approval
 7. ✅ Begin execution
 
-**Available at any time:** Say **"Generate status report"** for full project state.
+**Available commands:**
+- **"Show me guide"** - See all available commands and customizations
+- **"Generate status report"** - Full 7-section project status
 
 ---
 
@@ -131,7 +133,8 @@ That's it! The agent will:
 
 **You monitor via:**
 - `STATUS.md` (always current)
-- **"Generate status report"** command (7-section detailed report)
+- **"Generate status report"** - 7-section detailed report
+- **"Show me guide"** - See all available commands
 
 ---
 
@@ -659,11 +662,11 @@ Tell agent: "Read START_PROMPT.md and execute accordingly"
 Agent will ask how many workers you want and configure automatically.
 ```
 
-**Get Status:**
+**Available Commands:**
 ```
-Say: "Generate status report"
-
-Agent provides 7-section detailed status.
+"Show me guide" → See all commands and customization options
+"Generate status report" → 7-section detailed status
+"What's next?" → Next priority item
 ```
 
 **Monitor Progress:**

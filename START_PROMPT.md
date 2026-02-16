@@ -71,6 +71,9 @@ COMMANDS AVAILABLE:
    (7-section format: Current State, Progress, Active Work, Recent Completions,
     Next Steps, Blockers, Approval Requests)
 
+📖 Help Guide: Say "Show me guide" or "What can you do?" for available commands
+   and customization options
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 WORKER CONFIGURATION NEEDED:
@@ -286,6 +289,115 @@ Once approved:
 6. Request phase approval
 7. Advance to next phase (with approval)
 8. Repeat until project complete
+
+---
+
+## Help Guide Command
+
+**User can request at any time:** "Show me guide" or "What can you do?"
+
+**You will provide:**
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AI LEAD PROJECT SKELETON - COMMAND GUIDE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 STATUS & REPORTING COMMANDS
+
+• "Generate status report"
+  → 7-section detailed project status
+  → Current state, progress, active work, recent completions, next steps
+
+• "What's our progress?"
+  → Quick progress summary with percentages
+
+• "What's next?"
+  → Next P0 priority item from TODO
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚙️  WORKER CONFIGURATION COMMANDS
+
+• "Enable X Codex workers"
+  → Activates Codex worker lane (code implementation)
+
+• "Add 2 more Claude workers"
+  → Scales up Claude worker pool
+
+• "Disable Gemini workers"
+  → Disables Gemini worker lane
+
+• "Change to lead-only mode"
+  → Disables all workers, you work alone
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎨 WORKER SPECIALIZATION CUSTOMIZATION
+
+• "Change Claude workers to also handle implementation"
+  → Updates Claude lane specialization
+
+• "Redefine Codex workers to focus on backend only"
+  → Custom specialization for Codex lane
+
+• "Make Gemini workers focus on testing and QA"
+  → Updates Gemini lane purpose
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🤖 MODEL SELECTION COMMANDS
+
+• "Use gpt-5.1-codex-mini for Codex workers"
+  → Sets specific model for Codex lane
+
+• "Use claude-sonnet-4.5 for Claude workers"
+  → Sets model for Claude lane
+
+• "Configure models: Codex=gpt-5.1-mini, Claude=claude-sonnet-4.5"
+  → Sets models for multiple lanes
+
+Note: Don't run expensive reasoning models on trivial tasks!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 EXECUTION COMMANDS
+
+• "Approve the plan"
+  → Approves execution plan, starts Phase 0
+
+• "Approve Phase X"
+  → Approves phase completion, advances to next phase
+
+• "Run tests"
+  → Executes test suite
+
+• "Show me the blueprint"
+  → Displays project requirements
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📁 FILE LOCATIONS
+
+• STATUS.md - Current state, TODO, worker roster
+• DECISIONS.md - Architectural decision log
+• AI_CONFIG.md - Worker configuration
+• AGENTS.md - Process guardrails
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 TIPS
+
+• All worker lanes start DISABLED - you choose what to enable
+• Worker specializations are customizable per-project
+• Models are configurable per-lane for cost optimization
+• Use "Generate status report" anytime for full project state
+• Lead-only mode (0 workers) is valid for small projects
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Need more details? Ask about any specific command or capability!
+```
 
 ---
 

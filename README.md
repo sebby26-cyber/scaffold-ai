@@ -14,7 +14,7 @@ An **AI project management framework** extracted from a production codebase that
 
 **Think of it as:** The "operating system" that allows AI lead agents to orchestrate multi-month projects with worker agents, persistent context, and guaranteed handoff.
 
-**Extracted from:** [krov/repo](https://github.com/example/krov) - a control-plane-first personal agent runtime with governed skill execution, multi-channel messaging (Telegram/Discord/Slack), and companion-like personalization. Successfully executed 5 phases, maintained 100% test pass rate, and survived multiple lead agent handoffs.
+**Extracted from:** [krov](https://github.com/sebby26-cyber/krov.git) - a control-plane-first personal agent runtime with governed skill execution, multi-channel messaging (Telegram/Discord/Slack), and companion-like personalization. Successfully executed 5 phases, maintained 100% test pass rate, and survived multiple lead agent handoffs.
 
 ---
 

@@ -97,7 +97,7 @@ def stamp_metadata(project_root: Path, skeleton_dir: Path):
 def setup_runtime(project_root: Path):
     """Create .ai_runtime/ directory structure."""
     runtime_dir = project_root / ".ai_runtime"
-    for subdir in ["logs", "session", "memory_pack_cache"]:
+    for subdir in ["logs", "session", "memory_pack_cache", "import_inbox", "memory_packs"]:
         (runtime_dir / subdir).mkdir(parents=True, exist_ok=True)
 
 

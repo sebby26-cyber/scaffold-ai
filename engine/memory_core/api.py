@@ -270,3 +270,17 @@ class SessionMemory:
     def detect_fts5_support(self) -> bool:
         """Check if FTS5 is available in this SQLite build."""
         return _store.detect_fts5(self.conn)
+
+    def get_message_count(self, session_id: str, namespace: str) -> int:
+        """Count messages in a session/namespace. Used for distillation triggers."""
+        return _store.get_message_count(self.conn, session_id, namespace)
+
+    def get_distill_interval(self, namespace: str) -> int:
+        """Get distill_every_n_turns for a namespace."""
+        ns_policy = self._policy.get_namespace_policy(namespace)
+        return ns_policy.distill_every_n_turns
+
+    def get_policy_field(self, namespace: str, field: str) -> Any:
+        """Get an arbitrary policy field for a namespace."""
+        ns_policy = self._policy.get_namespace_policy(namespace)
+        return getattr(ns_policy, field, None)

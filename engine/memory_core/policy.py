@@ -59,7 +59,12 @@ def load_policy(policy_path: Path | str | None = None) -> MemoryPolicy:
         if isinstance(ns_data, dict):
             namespaces[ns_name] = _parse_namespace_policy(ns_data)
 
-    return MemoryPolicy(namespaces=namespaces, global_denylist=global_denylist)
+    return MemoryPolicy(
+        namespaces=namespaces,
+        global_denylist=global_denylist,
+        auto_export_on_exit=data.get("auto_export_on_exit", True),
+        auto_import_inbox=data.get("auto_import_inbox", True),
+    )
 
 
 def _default_policy() -> MemoryPolicy:
@@ -72,6 +77,8 @@ def _default_policy() -> MemoryPolicy:
             "worker_ephemeral": NamespacePolicy(persist="none"),
         },
         global_denylist=[],
+        auto_export_on_exit=True,
+        auto_import_inbox=True,
     )
 
 

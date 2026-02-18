@@ -511,6 +511,179 @@ def test_session_memory_policy():
         shutil.rmtree(str(tmpdir))
 
 
+# ─── Test 14: Auto-import from inbox ───
+
+def test_auto_import_inbox():
+    from engine.ai_run import _auto_import_inbox
+    from engine.memory_core.api import SessionMemory
+
+    tmpdir = make_test_project()
+    skel = Path(skeleton_dir)
+    try:
+        from engine.ai_init import copy_templates, setup_runtime
+        copy_templates(skel, tmpdir)
+        setup_runtime(tmpdir)
+
+        # Create a session memory with data, export a pack
+        mem = SessionMemory(tmpdir)
+        mem.add_message("s1", "orchestrator", "user", "Message for import test")
+        mem.add_message("s1", "orchestrator", "assistant", "Response for import test")
+
+        # Export to a zip
+        export_zip = tmpdir / "test_inbox_pack.zip"
+        mem.export_pack(str(export_zip))
+        mem.close()
+
+        # Place the zip in import_inbox
+        inbox = tmpdir / ".ai_runtime" / "import_inbox"
+        inbox.mkdir(parents=True, exist_ok=True)
+        import shutil as _shutil
+        _shutil.copy2(str(export_zip), str(inbox / "test_inbox_pack.zip"))
+
+        # Wipe the original DB so we can verify import brings data back
+        db_path = tmpdir / ".ai_runtime" / "session" / "memory.db"
+        if db_path.exists():
+            db_path.unlink()
+
+        # Run auto-import
+        result = _auto_import_inbox(tmpdir)
+        assert result is not None, "Auto-import should have found and imported a pack"
+        assert "Auto-imported" in result, f"Unexpected result: {result}"
+
+        # Verify pack was moved to processed/
+        processed = inbox / "processed"
+        assert (processed / "test_inbox_pack.zip").exists(), "Pack not moved to processed/"
+        assert not (inbox / "test_inbox_pack.zip").exists(), "Pack still in inbox"
+
+        # Verify data was imported
+        mem2 = SessionMemory(tmpdir)
+        msgs = mem2.get_recent_messages("s1", "orchestrator", limit=10)
+        assert len(msgs) >= 2, f"Expected >= 2 imported messages, got {len(msgs)}"
+        mem2.close()
+    finally:
+        shutil.rmtree(str(tmpdir))
+
+
+# ─── Test 15: Auto-export pack ───
+
+def test_auto_export_pack():
+    from engine.ai_run import _auto_export_pack
+    from engine.memory_core.api import SessionMemory
+
+    tmpdir = make_test_project()
+    skel = Path(skeleton_dir)
+    try:
+        from engine.ai_init import copy_templates, setup_runtime
+        copy_templates(skel, tmpdir)
+        setup_runtime(tmpdir)
+
+        # Create session data (must use session_id "default" and namespace "orchestrator"
+        # since _auto_export_pack checks for count > 0 on those)
+        mem = SessionMemory(tmpdir)
+        mem.add_message("default", "orchestrator", "user", "Test for auto-export")
+        mem.add_message("default", "orchestrator", "assistant", "Acknowledged")
+        mem.close()
+
+        # Run auto-export
+        result = _auto_export_pack(tmpdir)
+        assert result is not None, "Auto-export should have produced a pack"
+        assert Path(result).exists(), f"Export file missing: {result}"
+
+        # Check memory_packs/ has the file
+        packs_dir = tmpdir / ".ai_runtime" / "memory_packs"
+        packs = list(packs_dir.glob("session_pack_*.zip"))
+        assert len(packs) >= 1, f"Expected at least 1 pack in memory_packs/, got {len(packs)}"
+    finally:
+        shutil.rmtree(str(tmpdir))
+
+
+# ─── Test 16: Distillation check ───
+
+def test_distillation_check():
+    from engine.ai_run import _check_distillation
+    from engine.memory_core.api import SessionMemory
+
+    tmpdir = make_test_project()
+    try:
+        runtime_session = tmpdir / ".ai_runtime" / "session"
+        runtime_session.mkdir(parents=True, exist_ok=True)
+
+        mem = SessionMemory(tmpdir)
+
+        # Default orchestrator distill_every_n_turns = 20
+        assert not _check_distillation(mem, "s1", "orchestrator", 0), "Should not distill at turn 0"
+        assert not _check_distillation(mem, "s1", "orchestrator", 5), "Should not distill at turn 5"
+        assert _check_distillation(mem, "s1", "orchestrator", 20), "Should distill at turn 20"
+        assert _check_distillation(mem, "s1", "orchestrator", 40), "Should distill at turn 40"
+        assert not _check_distillation(mem, "s1", "orchestrator", 21), "Should not distill at turn 21"
+
+        mem.close()
+    finally:
+        shutil.rmtree(str(tmpdir))
+
+
+# ─── Test 17: STATUS.md updates on state change ───
+
+def test_status_md_auto_update():
+    from engine.ai_init import copy_templates, setup_runtime
+    from engine.ai_state import reconcile, render_status
+
+    tmpdir = make_test_project()
+    skel = Path(skeleton_dir)
+    try:
+        copy_templates(skel, tmpdir)
+        setup_runtime(tmpdir)
+
+        ai_dir = tmpdir / ".ai"
+        runtime_dir = tmpdir / ".ai_runtime"
+
+        reconcile(ai_dir, runtime_dir)
+        render_status(ai_dir, runtime_dir)
+
+        status_path = ai_dir / "STATUS.md"
+        assert status_path.exists(), "STATUS.md not created"
+        content = status_path.read_text()
+        assert "# Project Status" in content, "STATUS.md missing header"
+        assert "Last updated:" in content, "STATUS.md missing timestamp"
+
+        # Modify board.yaml to simulate a state change
+        import yaml
+        board_path = ai_dir / "state" / "board.yaml"
+        board = yaml.safe_load(board_path.read_text()) or {}
+        board.setdefault("tasks", []).append({
+            "id": "test-task-1",
+            "title": "Test task for STATUS.md update",
+            "status": "in_progress",
+            "owner_role": "developer",
+        })
+        board_path.write_text(yaml.dump(board, default_flow_style=False, sort_keys=False))
+
+        # Re-reconcile and re-render
+        reconcile(ai_dir, runtime_dir)
+        render_status(ai_dir, runtime_dir)
+
+        content2 = status_path.read_text()
+        assert "test-task-1" in content2 or "Test task" in content2, \
+            "STATUS.md should reflect the new task"
+    finally:
+        shutil.rmtree(str(tmpdir))
+
+
+# ─── Test 18: Init creates import_inbox and memory_packs dirs ───
+
+def test_init_creates_autopersist_dirs():
+    from engine.ai_init import setup_runtime
+
+    tmpdir = make_test_project()
+    try:
+        setup_runtime(tmpdir)
+        runtime_dir = tmpdir / ".ai_runtime"
+        assert (runtime_dir / "import_inbox").is_dir(), "import_inbox/ not created"
+        assert (runtime_dir / "memory_packs").is_dir(), "memory_packs/ not created"
+    finally:
+        shutil.rmtree(str(tmpdir))
+
+
 # ─── Run all ───
 
 def main():
@@ -538,6 +711,11 @@ def main():
     check("Session memory redaction", test_session_memory_redaction)
     check("Session memory pack roundtrip", test_session_memory_pack_roundtrip)
     check("Session memory policy enforcement", test_session_memory_policy)
+    check("Auto-import from inbox", test_auto_import_inbox)
+    check("Auto-export pack", test_auto_export_pack)
+    check("Distillation check", test_distillation_check)
+    check("STATUS.md auto-update", test_status_md_auto_update)
+    check("Init creates autopersist dirs", test_init_creates_autopersist_dirs)
 
     print(f"\n{'=' * 40}")
     print(f"  Results: {passed} passed, {failed} failed")

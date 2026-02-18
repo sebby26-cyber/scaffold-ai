@@ -67,6 +67,8 @@ class MemoryPolicy:
     """Full policy configuration across all namespaces."""
     namespaces: dict[str, NamespacePolicy] = field(default_factory=dict)
     global_denylist: list[str] = field(default_factory=list)
+    auto_export_on_exit: bool = True
+    auto_import_inbox: bool = True
 
     def get_namespace_policy(self, namespace: str) -> NamespacePolicy:
         """Get policy for a namespace, falling back to defaults."""

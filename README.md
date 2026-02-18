@@ -97,11 +97,13 @@ The orchestrator reads your intent and handles everything internally.
 
 From here, you just keep talking. Ask for progress, approve or reject work, request changes. The orchestrator manages tasks, delegates to workers, and commits state changes to the repo on your behalf.
 
+Everything is saved automatically. Your conversation is persisted to session memory, project state is updated in `.ai/`, and a session memory pack is exported when you exit. You never need to manually save.
+
 ---
 
 ## Resuming on a New Computer
 
-When you move to a different machine or start a fresh clone, your project state comes with the repo. Session memory (conversation history) is optional but recommended for richer continuity.
+When you move to a different machine or start a fresh clone, your project state comes with the repo. Session memory (conversation history) is portable via memory packs for richer continuity.
 
 ### Step 1 — Clone and initialize
 
@@ -113,20 +115,23 @@ python vendor/ai-skeleton/engine/ai init --non-interactive
 
 This rebuilds the local runtime from the committed project state. The orchestrator immediately knows the current phase, task board, and decision history.
 
-### Step 2 — Import memory (optional)
+### Step 2 — Import memory (if available)
 
-If you exported a memory pack from your previous machine:
+If you have a memory pack from your previous machine, drop it into `.ai_runtime/import_inbox/` before running `ai run`. The system auto-imports it on startup.
+
+Or tell the orchestrator:
 
 ```
 "Import previous memory and resume where we left off."
 ```
 
-This restores conversation history and session context. Without it, the orchestrator still works — it just won't have the full conversation timeline.
+If no memory pack exists in the inbox, the system tells you where to place one. Without it, the orchestrator still works — it just won't have the full conversation timeline.
 
 ### How it works
 
 - `.ai/` = project truth. Travels with git. Always present after a clone.
 - `.ai_runtime/` = local session data. Rebuilt automatically. Enhanced by memory packs.
+- Memory packs are auto-exported on exit and can be dropped into `import_inbox/` on a new machine.
 
 ---
 
@@ -464,6 +469,8 @@ Persistent, model-agnostic session memory that reduces token usage across runs. 
 ### Mental Model
 
 Session memory lives locally in `.ai_runtime/` and is never committed. It improves continuity across sessions and reduces token usage by replacing full conversation replay with compact summaries and distilled facts. It is portable via memory packs but does not replace canonical project state in `.ai/`.
+
+Persistence is automatic. Every orchestrator turn is saved to session memory, and a memory pack is auto-exported on graceful exit. On startup, the system checks `.ai_runtime/import_inbox/` for packs to auto-import. No manual save commands are required for normal use.
 
 ### Namespaces
 

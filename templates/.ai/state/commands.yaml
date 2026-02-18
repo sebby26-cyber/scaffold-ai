@@ -39,3 +39,30 @@ commands:
       - "/git-sync"
     handler: handle_git_sync
     description: Commit canonical AI state files to git
+
+  - name: migrate
+    aliases:
+      - "/migrate"
+    handler: handle_migrate
+    description: Apply new skeleton template files (non-destructive)
+
+  - name: memory-export
+    aliases:
+      - "/memory-export"
+      - "session-memory-export"
+    handler: handle_session_memory_export
+    description: Export session memory pack (advanced)
+
+  - name: memory-import
+    aliases:
+      - "/memory-import"
+      - "session-memory-import"
+    handler: handle_session_memory_import
+    description: Import session memory pack (advanced)
+
+  - name: memory-purge
+    aliases:
+      - "/memory-purge"
+      - "session-memory-purge"
+    handler: handle_session_memory_purge
+    description: Purge session memory by namespace or age (advanced)

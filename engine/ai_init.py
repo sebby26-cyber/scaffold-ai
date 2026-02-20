@@ -292,6 +292,13 @@ def init(project_root: Path | None = None, interactive: bool = True):
         except (EOFError, KeyboardInterrupt):
             print("\nOnboarding skipped (non-interactive).")
 
+    # 8) Verify protocol file
+    protocol_path = ai_dir / "AGENTS.md"
+    if protocol_path.exists():
+        print("  [OK] Operator protocol loaded (.ai/AGENTS.md)")
+    else:
+        print("  [WARN] .ai/AGENTS.md not found in templates")
+
     print("\nInitialization complete.")
     print(f"  Canonical state: {ai_dir}/state/")
     print(f"  Runtime cache:   {runtime_dir}/")

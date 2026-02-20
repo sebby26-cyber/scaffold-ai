@@ -103,6 +103,8 @@ python3 vendor/scaffold-ai/engine/ai help
 
 Or just ask the orchestrator: **"help"**, **"guide me"**, or **"what can you do?"**
 
+The orchestrator loads `.ai/AGENTS.md` automatically at startup — you don't need to memorize commands.
+
 Optional: create a wrapper script at your project root:
 
 ```bash
@@ -227,6 +229,13 @@ For the CLI: `ai help` (terminal) or `ai help --json` (for Kanban UI integration
 | [Agent Handoff/Resume Protocol](AGENT_HANDOFF_RESUME_PROTOCOL.md) | Cross-machine continuity procedures |
 | [Smoke Test: Auto-Persistence](docs/SMOKE_TEST_AUTOPERSIST.md) | Manual verification steps |
 | [Engine README](engine/README.md) | Engine internals, module map |
+| [Operator Protocol](templates/.ai/AGENTS.md) | Agent behavior rules, command routing, startup checklist |
+
+### AGENTS.md / Operator Protocol
+
+`.ai/AGENTS.md` is the single source of truth for how AI agents behave in this project. It is copied from templates during `ai init` and loaded automatically at the start of every session.
+
+It defines: a startup checklist, deterministic command mode (prefix `/` always routes to handlers), the no-freestyle rule (status/help/report must use the repo's generators, never improvise), and natural language shortcuts. To force command mode from any agent, prefix your message with `/` (e.g. `/status`, `/help --json`).
 
 ---
 

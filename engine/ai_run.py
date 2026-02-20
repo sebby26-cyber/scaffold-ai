@@ -382,6 +382,47 @@ def _log_canonical_event(project_root: Path, event_type: str, detail: str):
         pass  # Non-critical: don't break flow for logging failures
 
 
+# ── Protocol Loading ──
+
+
+def load_protocol(project_root: Path) -> str | None:
+    """Load .ai/AGENTS.md operator protocol.
+
+    Returns the protocol text, or None if not found.
+    """
+    protocol_path = project_root / ".ai" / "AGENTS.md"
+    if protocol_path.exists():
+        return protocol_path.read_text()
+    return None
+
+
+def get_protocol_summary(project_root: Path) -> dict:
+    """Return a machine-readable protocol summary for runtime context.
+
+    Used by external agents (Codex, Claude CLI) to bootstrap deterministic behavior.
+    """
+    import json
+
+    protocol_text = load_protocol(project_root)
+    ai_dir = project_root / ".ai"
+    runtime_dir = project_root / ".ai_runtime"
+
+    summary = {
+        "protocol_loaded": protocol_text is not None,
+        "canonical_state_present": ai_dir.is_dir() and (ai_dir / "state").is_dir(),
+        "runtime_present": runtime_dir.is_dir(),
+        "command_prefix": "/",
+        "available_commands": list(load_command_registry(project_root).keys()),
+    }
+
+    # Write to runtime for external tools
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+    snapshot_path = runtime_dir / "protocol_loaded.json"
+    snapshot_path.write_text(json.dumps(summary, indent=2))
+
+    return summary
+
+
 # ── Run Loop (with Auto-Persistence) ──
 
 
@@ -416,6 +457,14 @@ def run_loop(project_root: Path):
     # Initialize session memory
     session_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_") + uuid.uuid4().hex[:8]
     mem = SessionMemory(project_root)
+
+    # Load operator protocol
+    protocol = load_protocol(project_root)
+    if protocol:
+        get_protocol_summary(project_root)
+        print("  Protocol loaded.")
+    else:
+        print("  [WARN] .ai/AGENTS.md not found. Run 'ai init' to create it.")
 
     # Auto-import from inbox
     import_msg = _auto_import_inbox(project_root)

@@ -1,1 +1,1 @@
-"""AI Team Skeleton Engine."""
+"""Scaffold AI Engine."""

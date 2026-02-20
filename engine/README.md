@@ -1,6 +1,6 @@
-# AI Team Skeleton — Engine
+# Scaffold AI — Engine
 
-The engine provides the CLI and runtime for the Universal AI Team Skeleton.
+The engine provides the CLI and runtime for Scaffold AI.
 
 ## Requirements
 
@@ -15,10 +15,10 @@ This skeleton is designed to be used as a **git submodule** inside your project:
 
 ```bash
 # Add as submodule
-git submodule add <skeleton-repo-url> vendor/ai-skeleton
+git submodule add <skeleton-repo-url> vendor/scaffold-ai
 
 # Or clone directly for standalone use
-git clone <skeleton-repo-url> vendor/ai-skeleton
+git clone <skeleton-repo-url> vendor/scaffold-ai
 ```
 
 ## Usage
@@ -27,28 +27,28 @@ All commands are run from your **project root**, not the skeleton directory:
 
 ```bash
 # Initialize — creates .ai/ (canonical state) and .ai_runtime/ (local cache)
-python vendor/ai-skeleton/engine/ai init
+python vendor/scaffold-ai/engine/ai init
 
 # Check status
-python vendor/ai-skeleton/engine/ai status
+python vendor/scaffold-ai/engine/ai status
 
 # Start interactive orchestrator loop
-python vendor/ai-skeleton/engine/ai run
+python vendor/scaffold-ai/engine/ai run
 
 # Export memory pack for portability
-python vendor/ai-skeleton/engine/ai export-memory --out pack.zip
+python vendor/scaffold-ai/engine/ai export-memory --out pack.zip
 
 # Import memory pack on another machine
-python vendor/ai-skeleton/engine/ai import-memory --in pack.zip
+python vendor/scaffold-ai/engine/ai import-memory --in pack.zip
 
 # Rebuild local DB from canonical YAML (if DB is corrupted or missing)
-python vendor/ai-skeleton/engine/ai rehydrate-db
+python vendor/scaffold-ai/engine/ai rehydrate-db
 
 # Validate YAML files against schemas
-python vendor/ai-skeleton/engine/ai validate
+python vendor/scaffold-ai/engine/ai validate
 
 # Commit only canonical state files to git
-python vendor/ai-skeleton/engine/ai git-sync
+python vendor/scaffold-ai/engine/ai git-sync
 ```
 
 ## Architecture
@@ -78,7 +78,7 @@ python vendor/ai-skeleton/engine/ai git-sync
 
 ```
 project-root/
-├── vendor/ai-skeleton/          # This skeleton (submodule)
+├── vendor/scaffold-ai/          # Scaffold AI (submodule)
 │   ├── engine/
 │   │   ├── ai                   # CLI entrypoint
 │   │   ├── ai_init.py           # Initialization
@@ -115,7 +115,7 @@ project-root/
 Run the built-in sanity tests:
 
 ```bash
-python vendor/ai-skeleton/engine/self_check.py
+python vendor/scaffold-ai/engine/self_check.py
 ```
 
 ## Extending

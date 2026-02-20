@@ -1,4 +1,4 @@
-# AI Team Runbook
+# Scaffold AI Runbook
 
 ## Getting Started
 
@@ -49,7 +49,7 @@ To transfer context to another machine:
 This skeleton is designed to be used as a git submodule:
 
 ```bash
-git submodule add <repo-url> vendor/ai-skeleton
-python vendor/ai-skeleton/engine/ai init
-python vendor/ai-skeleton/engine/ai status
+git submodule add <repo-url> vendor/scaffold-ai
+python vendor/scaffold-ai/engine/ai init
+python vendor/scaffold-ai/engine/ai status
 ```

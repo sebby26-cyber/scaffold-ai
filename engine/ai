@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ai — CLI entrypoint for the AI Team Skeleton engine.
+ai — CLI entrypoint for the Scaffold AI engine.
 
 Usage:
     ai init                        Initialize .ai/ and .ai_runtime/ in the project
@@ -16,8 +16,8 @@ Usage:
     ai memory purge [--ns NS] [--days N]  Purge session memory
 
 Submodule usage:
-    python vendor/ai-skeleton/engine/ai init
-    python vendor/ai-skeleton/engine/ai status
+    python vendor/scaffold-ai/engine/ai init
+    python vendor/scaffold-ai/engine/ai status
 """
 
 import os
@@ -34,7 +34,7 @@ from engine import ai_git, ai_init, ai_run
 
 def print_help():
     print("""
-AI Team Skeleton — CLI
+Scaffold AI — CLI
 
 Commands:
   init                        Initialize .ai/ and .ai_runtime/ in the project
@@ -55,9 +55,9 @@ Options:
   --non-interactive           Skip onboarding prompts during init
 
 Examples (submodule usage):
-  python vendor/ai-skeleton/engine/ai init
-  python vendor/ai-skeleton/engine/ai status
-  python vendor/ai-skeleton/engine/ai export-memory --out pack.zip
+  python vendor/scaffold-ai/engine/ai init
+  python vendor/scaffold-ai/engine/ai status
+  python vendor/scaffold-ai/engine/ai export-memory --out pack.zip
 """)
 
 

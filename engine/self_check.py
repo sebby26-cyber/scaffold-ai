@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-self_check.py — Sanity checks for the AI Team Skeleton engine.
+self_check.py — Sanity checks for the Scaffold AI engine.
 
 Runs basic tests to verify core functionality:
   1. Project root detection
@@ -689,7 +689,7 @@ def test_init_creates_autopersist_dirs():
 def main():
     global passed, failed
 
-    print("\n=== AI Team Skeleton — Self Check ===\n")
+    print("\n=== Scaffold AI — Self Check ===\n")
 
     # Check PyYAML
     try:

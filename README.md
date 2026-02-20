@@ -1,4 +1,4 @@
-# Universal AI Team Skeleton
+# Scaffold AI
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-green.svg)](https://www.python.org)
@@ -67,23 +67,23 @@ graph LR
 
 ```bash
 # Add skeleton as a submodule
-git submodule add https://github.com/sebby26-cyber/ai-lead-project-skeleton.git vendor/ai-skeleton
+git submodule add https://github.com/sebby26-cyber/scaffold-ai.git vendor/scaffold-ai
 
 # Initialize (does not overwrite existing project files)
-python3 vendor/ai-skeleton/engine/ai init
+python3 vendor/scaffold-ai/engine/ai init
 
 # Check project status
-python3 vendor/ai-skeleton/engine/ai status
+python3 vendor/scaffold-ai/engine/ai status
 
 # Validate state files against schemas
-python3 vendor/ai-skeleton/engine/ai validate
+python3 vendor/scaffold-ai/engine/ai validate
 ```
 
 Optional: create a wrapper script at your project root:
 
 ```bash
 #!/usr/bin/env bash
-exec python3 "$(dirname "$0")/vendor/ai-skeleton/engine/ai" "$@"
+exec python3 "$(dirname "$0")/vendor/scaffold-ai/engine/ai" "$@"
 ```
 
 **Prerequisites:** Python 3.9+, PyYAML (`pip install pyyaml`), Git
@@ -157,7 +157,7 @@ The orchestrator translates intent into internal actions automatically.
 ```bash
 git clone <your-project-repo>
 git submodule update --init --recursive
-python3 vendor/ai-skeleton/engine/ai init --non-interactive
+python3 vendor/scaffold-ai/engine/ai init --non-interactive
 ```
 
 This rebuilds the local runtime from committed state. The orchestrator knows the current phase, task board, and decisions immediately.

@@ -96,7 +96,12 @@ python3 vendor/scaffold-ai/engine/ai status
 
 # Validate state files against schemas
 python3 vendor/scaffold-ai/engine/ai validate
+
+# Context-aware help guide
+python3 vendor/scaffold-ai/engine/ai help
 ```
+
+Or just ask the orchestrator: **"help"**, **"guide me"**, or **"what can you do?"**
 
 Optional: create a wrapper script at your project root:
 
@@ -156,6 +161,7 @@ The orchestrator translates intent into internal actions automatically.
 
 | Command | Purpose | Modifies |
 |---------|---------|----------|
+| `ai help` | Context-aware help guide (supports `--json`) | Nothing (read-only) |
 | `ai init` | Initialize `.ai/` and `.ai_runtime/` | Creates dirs, stamps metadata |
 | `ai run` | Start interactive orchestrator loop | Session memory only |
 | `ai status` | Print project status report | Renders STATUS.md |
@@ -195,6 +201,14 @@ This is **infrastructure you add to a project** to help AI agents run it reliabl
 - Everything is tracked in version-controlled YAML that humans can read and audit
 
 The skeleton is **submodule-ready**: add it to any git project, initialize, and the orchestrator takes over project management. Engine updates propagate via `git submodule update` and `ai migrate` without touching your project state.
+
+---
+
+## Help / Guide
+
+Ask the orchestrator **"help"**, **"guide me"**, or **"what can you do?"** to get a context-aware guide tailored to your project's current state. The guide inspects whether the project is initialized, whether team assignments are configured, whether session memory is active, and whether memory packs are available.
+
+For the CLI: `ai help` (terminal) or `ai help --json` (for Kanban UI integration).
 
 ---
 

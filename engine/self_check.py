@@ -684,6 +684,85 @@ def test_init_creates_autopersist_dirs():
         shutil.rmtree(str(tmpdir))
 
 
+# ─── Test 19: Help/guide generation ───
+
+def test_help_guide():
+    from engine.help import generate_help, render_help_terminal, render_help_json
+    from engine.ai_init import copy_templates, setup_runtime, stamp_metadata
+
+    tmpdir = make_test_project()
+    skel = Path(skeleton_dir)
+    try:
+        copy_templates(skel, tmpdir)
+        setup_runtime(tmpdir)
+        stamp_metadata(tmpdir, skel)
+
+        # Generate help
+        guide = generate_help(tmpdir)
+
+        # Check model fields
+        assert guide.generated_at, "generated_at missing"
+        assert guide.project_name, "project_name missing"
+        assert guide.current_state.initialized, "Should detect as initialized"
+        assert len(guide.quick_start_steps) >= 2, "Quick start should have at least 2 steps"
+        assert len(guide.common_prompts) >= 5, "Should have at least 5 common prompts"
+        assert len(guide.commands) >= 8, "Should have at least 8 commands"
+        assert len(guide.how_to_resume_on_new_machine) >= 3, "Resume steps should have at least 3"
+        assert len(guide.troubleshooting) >= 3, "Should have at least 3 troubleshooting tips"
+        assert len(guide.where_to_find_files) >= 5, "Should have at least 5 file locations"
+
+        # Terminal rendering
+        terminal = render_help_terminal(guide)
+        assert "SCAFFOLD AI" in terminal, "Terminal should contain brand name"
+        assert "Quick Start" in terminal, "Terminal should have Quick Start section"
+        assert "What You Can Say" in terminal, "Terminal should have prompts section"
+        assert "Resume" in terminal, "Terminal should have resume section"
+
+        # JSON rendering
+        json_out = render_help_json(guide)
+        import json
+        parsed = json.loads(json_out)
+        assert "current_state" in parsed, "JSON should have current_state"
+        assert "quick_start_steps" in parsed, "JSON should have quick_start_steps"
+        assert "commands" in parsed, "JSON should have commands"
+        assert parsed["current_state"]["initialized"] is True, "JSON should show initialized"
+
+        # State awareness: no memory pack, no session memory yet
+        assert guide.current_state.memory_runtime_present is False or \
+               guide.current_state.memory_runtime_present is True, "memory_runtime_present should be bool"
+
+    finally:
+        shutil.rmtree(str(tmpdir))
+
+
+# ─── Test 20: Help via command handler ───
+
+def test_help_command_handler():
+    from engine.ai_run import handle_help
+    from engine.ai_init import copy_templates, setup_runtime, stamp_metadata
+
+    tmpdir = make_test_project()
+    skel = Path(skeleton_dir)
+    try:
+        copy_templates(skel, tmpdir)
+        setup_runtime(tmpdir)
+        stamp_metadata(tmpdir, skel)
+
+        # Terminal mode
+        result = handle_help(tmpdir)
+        assert "SCAFFOLD AI" in result, "Help handler should produce terminal output"
+        assert "Quick Start" in result
+
+        # JSON mode
+        result_json = handle_help(tmpdir, json=True)
+        import json
+        parsed = json.loads(result_json)
+        assert "current_state" in parsed
+
+    finally:
+        shutil.rmtree(str(tmpdir))
+
+
 # ─── Run all ───
 
 def main():
@@ -716,6 +795,8 @@ def main():
     check("Distillation check", test_distillation_check)
     check("STATUS.md auto-update", test_status_md_auto_update)
     check("Init creates autopersist dirs", test_init_creates_autopersist_dirs)
+    check("Help/guide generation", test_help_guide)
+    check("Help command handler", test_help_command_handler)
 
     print(f"\n{'=' * 40}")
     print(f"  Results: {passed} passed, {failed} failed")

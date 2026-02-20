@@ -2,6 +2,18 @@
 # Maps command names and aliases to handler functions.
 
 commands:
+  - name: help
+    aliases:
+      - "/help"
+      - "guide"
+      - "guide me"
+      - "how do I use this"
+      - "what can you do"
+      - "show me the guide"
+      - "commands"
+    handler: handle_help
+    description: Show context-aware help and usage guide
+
   - name: status
     aliases:
       - "/status"

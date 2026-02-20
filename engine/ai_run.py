@@ -193,6 +193,22 @@ def handle_session_memory_purge(
         mem.close()
 
 
+def handle_help(project_root: Path, **kwargs) -> str:
+    """Generate context-aware help/guide."""
+    from .help import generate_help, render_help_terminal, render_help_json
+
+    adapter = _load_adapter_data(project_root)
+    adapter_dict = None
+    if adapter is not None:
+        adapter_dict = {"project_name": adapter.get("project_name")}
+
+    guide = generate_help(project_root, adapter_dict)
+
+    if kwargs.get("json"):
+        return render_help_json(guide)
+    return render_help_terminal(guide)
+
+
 def handle_git_sync(project_root: Path, message: str | None = None, **kwargs) -> str:
     # First render status to update STATUS.md
     ai_dir = project_root / ".ai"
@@ -209,6 +225,7 @@ def handle_git_sync(project_root: Path, message: str | None = None, **kwargs) ->
 
 HANDLERS = {
     "handle_status": handle_status,
+    "handle_help": handle_help,
     "handle_export_memory": handle_export_memory,
     "handle_import_memory": handle_import_memory,
     "handle_rehydrate_db": handle_rehydrate_db,

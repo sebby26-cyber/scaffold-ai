@@ -5,6 +5,7 @@ ai — CLI entrypoint for the Scaffold AI engine.
 Usage:
     ai init                        Initialize .ai/ and .ai_runtime/ in the project
     ai run                         Start the interactive orchestrator loop
+    ai help [--json]               Context-aware help and usage guide
     ai status                      Generate and print project status report
     ai export-memory [--out PATH]  Export memory pack
     ai import-memory --in PATH     Import memory pack
@@ -39,6 +40,7 @@ Scaffold AI — CLI
 Commands:
   init                        Initialize .ai/ and .ai_runtime/ in the project
   run                         Start the interactive orchestrator loop
+  help [--json]               Context-aware help and usage guide
   status                      Generate and print project status report
   export-memory [--out PATH]  Export memory pack for portability
   import-memory --in PATH     Import a memory pack
@@ -98,6 +100,10 @@ def main():
 
     elif command == "run":
         ai_run.run_loop(project_root)
+
+    elif command in ("help", "guide"):
+        result = ai_run.handle_help(project_root, json="json" in flags)
+        print(result)
 
     elif command == "status":
         result = ai_run.handle_status(project_root, json="json" in flags)

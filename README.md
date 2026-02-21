@@ -82,19 +82,50 @@ graph LR
 
 ---
 
-## Quick Start
+## Quick Start (Talk to AI)
 
-### Any AI CLI (Claude Code, Codex, Cursor)
+You don't need to run commands. Just tell your AI what to do.
 
-Start any new AI session with this prompt to load the project protocol, resume state, and activate full capabilities.
+### Step 1 — Set up the project
+
+If this is a new project or the system isn't set up yet, tell your AI:
+
+```
+Pull the Scaffold AI skeleton into this project as a submodule at vendor/scaffold-ai, then run its initializer to set up the .ai/ directory and runtime.
+```
+
+The AI will handle cloning, submodule setup, and initialization. No terminal required.
+
+If the skeleton is already present, skip to the next step.
+
+### Step 2 — Activate the protocol
+
+Paste this at the start of any new AI session:
 
 ```
 Load `.ai/AGENTS.md` as your operating protocol, align to the current project state (resume if it exists, initialize if not), enforce command-first behavior with no freestyle outputs, and confirm readiness by summarizing project status and listing available commands.
 ```
 
-Paste this once at the start of any new session. Compatible with Claude Code, OpenAI Codex CLI, and Cursor (partial support). These tools may auto-load protocol files, but this prompt guarantees correct behavior.
+This is the single activation prompt. It works with Claude Code, OpenAI Codex CLI, and Cursor (partial support). These tools may auto-load protocol files, but this prompt guarantees correct behavior.
 
-### Setup
+### Step 3 — Talk to it
+
+Once active, just say what you need:
+
+- **"Show me the current status"** — see project state and progress
+- **"What's been completed and what's next?"** — task overview
+- **"Start or initialize the project"** — set up from scratch
+- **"Save current progress"** — export memory for continuity
+- **"Validate the project"** — check state integrity
+- **"Help"** — see the full prompt guide
+
+The system maps your intent to the right action automatically. No commands to memorize.
+
+---
+
+### Developer Setup (CLI)
+
+If you prefer terminal commands or need to set up CI/automation:
 
 ```bash
 # Add skeleton as a submodule
@@ -113,9 +144,7 @@ python3 vendor/scaffold-ai/engine/ai validate
 python3 vendor/scaffold-ai/engine/ai help
 ```
 
-Or just ask the orchestrator: **"help"**, **"guide me"**, or **"what can you do?"**
-
-The orchestrator loads `.ai/AGENTS.md` automatically at startup — you don't need to memorize commands. Root bridge files (`AGENTS.md`, `CLAUDE.md`) are auto-read by Codex and Claude Code respectively, so AI tools inherit project identity on session start with zero setup.
+The orchestrator loads `.ai/AGENTS.md` automatically at startup. Root bridge files (`AGENTS.md`, `CLAUDE.md`) are auto-read by Codex and Claude Code respectively, so AI tools inherit project identity on session start with zero setup.
 
 Optional: create a wrapper script at your project root:
 
@@ -154,18 +183,18 @@ Portable snapshots of session history. Canonical YAML records what is true now; 
 
 ## Talking to the Orchestrator
 
-You interact using natural language. No commands to memorize.
+You interact using natural language. No commands to memorize. The orchestrator translates your intent into internal actions automatically.
 
-```
-"Give me a status report."          → ai status
-"Save memory for another machine."  → ai export-memory
-"Import previous memory."           → ai import-memory
-"Commit current state."             → ai git-sync
-"Validate project state."           → ai validate
-"Rebuild the local database."       → ai rehydrate-db
-```
-
-The orchestrator translates intent into internal actions automatically.
+| You say | What happens |
+|---------|-------------|
+| "Show me the current status" | Generates project status report |
+| "What's been completed and what's next?" | Shows task progress and priorities |
+| "Are there any blockers?" | Surfaces blocked tasks and issues |
+| "Save current progress" | Exports memory pack for continuity |
+| "Restore previous session" | Imports a memory pack |
+| "Sync project state" | Commits canonical state to git |
+| "Validate the project" | Checks YAML integrity against schemas |
+| "Help" | Shows the full human prompt guide |
 
 ---
 
@@ -220,7 +249,7 @@ The skeleton is **submodule-ready**: add it to any git project, initialize, and 
 
 ## Help / Guide
 
-Ask the orchestrator **"help"**, **"guide me"**, or **"what can you do?"** to get a context-aware guide tailored to your project's current state. The guide inspects whether the project is initialized, whether team assignments are configured, whether session memory is active, and whether memory packs are available.
+Say **"help"**, **"guide me"**, or **"what can you do?"** to get a context-aware guide tailored to your project's current state. The guide shows human-friendly prompts organized by category (Getting Started, Project Visibility, Memory & Continuity, System Actions) with CLI commands listed as an advanced reference at the bottom.
 
 For the CLI: `ai help` (terminal) or `ai help --json` (for Kanban UI integration).
 

@@ -30,7 +30,7 @@ One orchestrator leads. Workers execute. State is tracked in plain YAML, committ
 
 ### What you get
 
-- **One leader, many workers** — single orchestrator with write authority; workers are read-only
+- **One leader, many workers** — single orchestrator with write authority; worker bees run in parallel across departments
 - **Project state in plain files** — YAML and Markdown, committed to git, diffable
 - **Automatic persistence** — every turn saved, memory exported on exit, imported on startup
 - **Portable context** — memory packs let you resume on any machine
@@ -118,6 +118,7 @@ Once active, just say what you need:
 - **"What's been completed and what's next?"** — task overview
 - **"Start or initialize the project"** — set up from scratch
 - **"Save current progress"** — export memory for continuity
+- **"Spin up worker bees for this task"** — run work in parallel
 - **"Validate the project"** — check state integrity
 - **"Help"** — see the full prompt guide
 

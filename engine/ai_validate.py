@@ -163,4 +163,47 @@ def validate_all(
         else:
             results["submodule_integrity"] = []
 
+    # Capabilities consistency check
+    caps_errors = validate_capabilities_consistency(ai_dir)
+    if caps_errors:
+        results["capabilities_consistency"] = caps_errors
+    else:
+        results["capabilities_consistency"] = []
+
     return results
+
+
+def validate_capabilities_consistency(ai_dir: Path) -> list[str]:
+    """Check that capabilities.yaml is consistent with help/guide output.
+
+    If worker_bees.supported is true, the help builder must include the
+    worker bees category. This prevents capability regression.
+    """
+    errors: list[str] = []
+    caps_path = ai_dir / "state" / "capabilities.yaml"
+
+    if not caps_path.exists():
+        return []  # No capabilities file is fine — help shows unconfigured state
+
+    if yaml is None:
+        return ["PyYAML required for capabilities validation"]
+
+    try:
+        caps = yaml.safe_load(caps_path.read_text()) or {}
+    except Exception as e:
+        return [f"Failed to parse capabilities.yaml: {e}"]
+
+    worker_cfg = caps.get("worker_bees", {})
+    if worker_cfg.get("supported"):
+        # Verify the help builder would include worker bees
+        from .help.builder import _load_capabilities, _build_prompt_categories
+        loaded = _load_capabilities(ai_dir)
+        categories = _build_prompt_categories(loaded)
+        bee_cats = [c for c in categories if "Worker" in c.name or "Bee" in c.name]
+        if not bee_cats:
+            errors.append(
+                "capabilities.yaml has worker_bees.supported=true but "
+                "help/guide does not include a Worker Bees category"
+            )
+
+    return errors

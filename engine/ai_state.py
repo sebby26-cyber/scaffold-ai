@@ -35,7 +35,7 @@ def compute_canonical_hash(ai_dir: Path) -> str:
     """Compute a hash of all canonical YAML files to detect changes."""
     state_dir = ai_dir / "state"
     h = hashlib.sha256()
-    for name in sorted(["team.yaml", "board.yaml", "approvals.yaml", "commands.yaml"]):
+    for name in sorted(["team.yaml", "board.yaml", "approvals.yaml", "commands.yaml", "capabilities.yaml"]):
         fpath = state_dir / name
         if fpath.exists():
             h.update(fpath.read_bytes())
@@ -94,6 +94,17 @@ def reconcile(ai_dir: Path, runtime_dir: Path) -> bool:
 
     conn.close()
     return True
+
+
+def _load_capabilities(ai_dir: Path) -> dict:
+    """Load capabilities.yaml if present."""
+    caps_path = ai_dir / "state" / "capabilities.yaml"
+    if caps_path.exists() and yaml is not None:
+        try:
+            return yaml.safe_load(caps_path.read_text()) or {}
+        except Exception:
+            pass
+    return {}
 
 
 def render_status(ai_dir: Path, runtime_dir: Path) -> str:
@@ -187,6 +198,33 @@ def render_status(ai_dir: Path, runtime_dir: Path) -> str:
         for t in done_tasks:
             lines.append(f"    - {t['id']}: {t['title']}")
         lines.append("")
+
+    # Worker Bees
+    capabilities = _load_capabilities(ai_dir)
+    worker_cfg = capabilities.get("worker_bees", {})
+    workers_configured = []
+    for role in team.get("roles", []):
+        for w in role.get("workers", []):
+            workers_configured.append({
+                "id": w.get("id", "?"),
+                "role": role.get("role_id", "?"),
+                "model": w.get("model", "?"),
+            })
+
+    lines.append("  Worker Bees:")
+    if workers_configured:
+        max_workers = worker_cfg.get("max_concurrent_workers", "?")
+        lines.append(f"    Configured: {len(workers_configured)} (max concurrent: {max_workers})")
+        for w in workers_configured:
+            # Find assigned tasks
+            assigned = [t for t in tasks if t.get("owner_role") == w["role"] and t.get("status") == "in_progress"]
+            task_info = f" — working on: {assigned[0]['id']}" if assigned else " — idle"
+            lines.append(f"    - {w['id']} ({w['role']}){task_info}")
+    else:
+        lines.append("    No worker assignments configured.")
+        if worker_cfg.get("supported"):
+            lines.append('    Say "Set up worker bees for this project" to configure.')
+    lines.append("")
 
     # Blockers / Approvals
     if pending:

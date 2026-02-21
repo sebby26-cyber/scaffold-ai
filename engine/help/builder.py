@@ -51,7 +51,8 @@ def generate_help(project_root: Path, adapter: dict | None = None) -> HelpGuide:
     quick_start = _build_quick_start(state, ai_dir)
 
     # --- Prompt categories (human-first, intent-mapped) ---
-    categories = _build_prompt_categories()
+    capabilities = _load_capabilities(ai_dir)
+    categories = _build_prompt_categories(capabilities)
     if adapter.get("extra_categories"):
         for cat in adapter["extra_categories"]:
             categories.append(HelpCategory(
@@ -121,9 +122,22 @@ def generate_help(project_root: Path, adapter: dict | None = None) -> HelpGuide:
     )
 
 
-def _build_prompt_categories() -> list[HelpCategory]:
+def _load_capabilities(ai_dir: Path) -> dict:
+    """Load capabilities.yaml from canonical state."""
+    caps_path = ai_dir / "state" / "capabilities.yaml"
+    if caps_path.exists() and yaml is not None:
+        try:
+            return yaml.safe_load(caps_path.read_text()) or {}
+        except Exception:
+            pass
+    return {}
+
+
+def _build_prompt_categories(capabilities: dict | None = None) -> list[HelpCategory]:
     """Build human-first intent categories with deterministic command mappings."""
-    return [
+    capabilities = capabilities or {}
+
+    categories = [
         HelpCategory(
             name="Getting Started",
             icon="\U0001f680",  # 🚀
@@ -141,6 +155,45 @@ def _build_prompt_categories() -> list[HelpCategory]:
                 HelpIntent("Are there any blockers?", "ai status"),
             ],
         ),
+    ]
+
+    # Worker bees category — driven by capabilities.yaml
+    worker_cfg = capabilities.get("worker_bees", {})
+    if worker_cfg.get("supported"):
+        categories.append(HelpCategory(
+            name="Parallel Work (Worker Bees)",
+            icon="\U0001f41d",  # 🐝
+            intents=[
+                HelpIntent("Spin up worker bees for this task", "orchestrator delegation"),
+                HelpIntent("Run tasks in parallel across departments", "orchestrator delegation"),
+                HelpIntent("Show me what each worker is doing", "ai status"),
+                HelpIntent("Summarize all worker outputs into one plan", "orchestrator merge"),
+                HelpIntent(
+                    "Set up worker bees for this project",
+                    "ai init (team onboarding)",
+                    description="Configure roles, count, and lanes",
+                ),
+            ],
+        ))
+    else:
+        categories.append(HelpCategory(
+            name="Parallel Work (Worker Bees)",
+            icon="\U0001f41d",  # 🐝
+            intents=[
+                HelpIntent(
+                    "Parallel workers are supported but not configured yet",
+                    "",
+                    description="Add capabilities.yaml with worker_bees.supported: true",
+                ),
+                HelpIntent(
+                    "Set up worker bees for this project",
+                    "ai init (team onboarding)",
+                    description="Configure roles, count, and lanes",
+                ),
+            ],
+        ))
+
+    categories.extend([
         HelpCategory(
             name="Memory & Continuity",
             icon="\U0001f9e0",  # 🧠
@@ -159,7 +212,9 @@ def _build_prompt_categories() -> list[HelpCategory]:
                 HelpIntent("Check if everything is working", "ai validate"),
             ],
         ),
-    ]
+    ])
+
+    return categories
 
 
 def _detect_state(ai_dir: Path, runtime_dir: Path) -> HelpCurrentState:

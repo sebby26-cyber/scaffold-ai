@@ -84,6 +84,18 @@ graph LR
 
 ## Quick Start
 
+### Any AI CLI (Claude Code, Codex, Cursor)
+
+Start any new AI session with this prompt to load the project protocol, resume state, and activate full capabilities.
+
+```
+Load `.ai/AGENTS.md` as your operating protocol, align to the current project state (resume if it exists, initialize if not), enforce command-first behavior with no freestyle outputs, and confirm readiness by summarizing project status and listing available commands.
+```
+
+Paste this once at the start of any new session. Compatible with Claude Code, OpenAI Codex CLI, and Cursor (partial support). These tools may auto-load protocol files, but this prompt guarantees correct behavior.
+
+### Setup
+
 ```bash
 # Add skeleton as a submodule
 git submodule add https://github.com/sebby26-cyber/scaffold-ai.git vendor/scaffold-ai
@@ -103,7 +115,7 @@ python3 vendor/scaffold-ai/engine/ai help
 
 Or just ask the orchestrator: **"help"**, **"guide me"**, or **"what can you do?"**
 
-The orchestrator loads `.ai/AGENTS.md` automatically at startup — you don't need to memorize commands.
+The orchestrator loads `.ai/AGENTS.md` automatically at startup — you don't need to memorize commands. Root bridge files (`AGENTS.md`, `CLAUDE.md`) are auto-read by Codex and Claude Code respectively, so AI tools inherit project identity on session start with zero setup.
 
 Optional: create a wrapper script at your project root:
 
@@ -233,9 +245,13 @@ For the CLI: `ai help` (terminal) or `ai help --json` (for Kanban UI integration
 
 ### AGENTS.md / Operator Protocol
 
-`.ai/AGENTS.md` is the single source of truth for how AI agents behave in this project. It is copied from templates during `ai init` and loaded automatically at the start of every session.
+**Protocol location:** `.ai/AGENTS.md` (canonical), root bridges: `AGENTS.md`, `CLAUDE.md`.
 
-It defines: a startup checklist, deterministic command mode (prefix `/` always routes to handlers), the no-freestyle rule (status/help/report must use the repo's generators, never improvise), and natural language shortcuts. To force command mode from any agent, prefix your message with `/` (e.g. `/status`, `/help --json`).
+`.ai/AGENTS.md` is the single source of truth for how AI agents behave in this project. It is copied from templates during `ai init` and loaded automatically at the start of every session. Root-level bridge files (`AGENTS.md` for Codex, `CLAUDE.md` for Claude Code) are also created by `ai init` — these instruct the tool to read and follow the canonical protocol, giving agents project identity on first interaction.
+
+It defines: a startup checklist, deterministic command mode (prefix `/` always routes to handlers), the no-freestyle rule (status/help/report must use the repo's generators, never improvise), drift control (repo state always overrides chat history), and natural language shortcuts. To force command mode from any agent, prefix your message with `/` (e.g. `/status`, `/help --json`).
+
+**Supported tools:** Claude Code (auto-loads `CLAUDE.md`), OpenAI Codex (auto-loads `AGENTS.md`), Cursor (partial/evolving support). On session start, the agent confirms protocol load before proceeding.
 
 ---
 

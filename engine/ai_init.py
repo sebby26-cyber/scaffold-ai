@@ -38,8 +38,10 @@ def find_skeleton_dir() -> Path:
 
 
 def copy_templates(skeleton_dir: Path, project_root: Path):
-    """Copy template files into the project's .ai/ directory.
+    """Copy template files into the project.
 
+    Copies .ai/ templates into project's .ai/ directory, and root-level
+    bridge files (AGENTS.md, CLAUDE.md) into the project root.
     Does not overwrite existing files.
     """
     templates_dir = skeleton_dir / "templates" / ".ai"
@@ -48,6 +50,7 @@ def copy_templates(skeleton_dir: Path, project_root: Path):
     if not templates_dir.exists():
         raise FileNotFoundError(f"Templates not found at {templates_dir}")
 
+    # Copy .ai/ templates
     for src_file in templates_dir.rglob("*"):
         if not src_file.is_file():
             continue
@@ -57,6 +60,14 @@ def copy_templates(skeleton_dir: Path, project_root: Path):
             continue  # Do not overwrite existing files
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(str(src_file), str(dst))
+
+    # Copy root-level bridge files (AGENTS.md, CLAUDE.md)
+    root_templates = skeleton_dir / "templates"
+    for name in ("AGENTS.md", "CLAUDE.md"):
+        src = root_templates / name
+        dst = project_root / name
+        if src.exists() and not dst.exists():
+            shutil.copy2(str(src), str(dst))
 
 
 def stamp_metadata(project_root: Path, skeleton_dir: Path):
@@ -298,6 +309,16 @@ def init(project_root: Path | None = None, interactive: bool = True):
         print("  [OK] Operator protocol loaded (.ai/AGENTS.md)")
     else:
         print("  [WARN] .ai/AGENTS.md not found in templates")
+
+    # 9) Verify root bridge files
+    bridges = []
+    for name in ("AGENTS.md", "CLAUDE.md"):
+        if (project_root / name).exists():
+            bridges.append(name)
+    if bridges:
+        print(f"  [OK] Root bridge files: {', '.join(bridges)}")
+    else:
+        print("  [WARN] No root bridge files (AGENTS.md, CLAUDE.md) created")
 
     print("\nInitialization complete.")
     print(f"  Canonical state: {ai_dir}/state/")

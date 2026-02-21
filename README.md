@@ -247,6 +247,17 @@ The skeleton is **submodule-ready**: add it to any git project, initialize, and 
 
 ---
 
+## System Safety
+
+The AI engine lives in a protected layer (the skeleton submodule). It is never modified during normal operation.
+
+- The system code is read-only. No agent can write to it, and no command will change it.
+- Your project data is stored separately in `.ai/` (committed) and `.ai_runtime/` (local cache).
+- Updates to the system happen through `git submodule update` and will not overwrite your project state.
+- The `validate` command checks that the system layer has not been tampered with.
+
+---
+
 ## Help / Guide
 
 Say **"help"**, **"guide me"**, or **"what can you do?"** to get a context-aware guide tailored to your project's current state. The guide shows human-friendly prompts organized by category (Getting Started, Project Visibility, Memory & Continuity, System Actions) with CLI commands listed as an advanced reference at the bottom.

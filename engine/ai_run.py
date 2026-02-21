@@ -98,7 +98,7 @@ def handle_rehydrate_db(project_root: Path, **kwargs) -> str:
 def handle_validate(project_root: Path, **kwargs) -> str:
     ai_dir = project_root / ".ai"
     schemas_dir = find_schemas_dir()
-    results = ai_validate.validate_all(ai_dir, schemas_dir)
+    results = ai_validate.validate_all(ai_dir, schemas_dir, project_root=project_root)
 
     lines = []
     all_valid = True

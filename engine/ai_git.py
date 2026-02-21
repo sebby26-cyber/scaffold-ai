@@ -53,11 +53,24 @@ def is_repo_clean(project_root: Path) -> bool:
     return result.stdout.strip() == ""
 
 
+def _get_submodule_paths(project_root: Path) -> list[str]:
+    """Return relative submodule paths to exclude from commits."""
+    result = run_git(["submodule", "status"], cwd=project_root)
+    paths = []
+    if result.returncode == 0:
+        for line in result.stdout.strip().splitlines():
+            parts = line.strip().lstrip("-+").split()
+            if len(parts) >= 2:
+                paths.append(parts[1])
+    return paths
+
+
 def git_sync(project_root: Path, message: str | None = None) -> tuple[bool, str]:
     """Stage and commit only whitelisted canonical .ai/ files.
 
-    Returns (success, message).
+    Never stages submodule changes. Returns (success, message).
     """
+    submodule_paths = _get_submodule_paths(project_root)
     staged_any = False
 
     for pattern in WHITELISTED_PATHS:
@@ -80,10 +93,12 @@ def git_sync(project_root: Path, message: str | None = None) -> tuple[bool, str]
     if not staged_files:
         return False, "No canonical changes to commit."
 
-    # Verify only whitelisted files are staged
+    # Verify only whitelisted files are staged — unstage anything else
+    # including anything inside submodules
     for line in staged_files.splitlines():
         allowed = any(line.startswith(wp.rstrip("/")) for wp in WHITELISTED_PATHS)
-        if not allowed:
+        in_submodule = any(line.startswith(sp) for sp in submodule_paths)
+        if not allowed or in_submodule:
             run_git(["reset", "HEAD", line], cwd=project_root)
 
     commit_msg = message or "chore(ai): update canonical state"

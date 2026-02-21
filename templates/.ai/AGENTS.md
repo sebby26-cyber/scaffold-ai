@@ -5,6 +5,20 @@
 
 ---
 
+## 0. Submodule Protection (Invariant)
+
+The skeleton submodule (typically `vendor/scaffold-ai/`) is a **read-only system layer**.
+
+**Rules (no exceptions, all agents):**
+- **NEVER** create, modify, or delete any file inside the submodule directory.
+- **NEVER** stage or commit changes to the submodule.
+- All writes MUST go to the parent project: `.ai/`, `.ai_runtime/`, or project-level files.
+- Submodule updates happen ONLY via `git submodule update --remote`.
+
+If you are about to write a file, resolve its absolute path first. If it falls inside the submodule, **stop and redirect** to the correct project directory.
+
+---
+
 ## 1. Startup Checklist
 
 On every new session, do these steps in order:

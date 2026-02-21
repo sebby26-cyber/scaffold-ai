@@ -96,8 +96,43 @@ def validate_file(yaml_path: Path, schema_path: Path) -> list[str]:
     return _validate_value(data, schema, yaml_path.name)
 
 
-def validate_all(ai_dir: Path, schemas_dir: Path) -> dict[str, list[str]]:
+def validate_submodule_integrity(project_root: Path) -> list[str]:
+    """Check that no files inside submodules have been modified.
+
+    Returns list of error messages (empty = clean).
+    """
+    from .guard import detect_submodule_paths
+
+    errors: list[str] = []
+    for sub_path in detect_submodule_paths(project_root):
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=str(sub_path),
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                for line in result.stdout.strip().splitlines():
+                    errors.append(
+                        f"Submodule modified: {sub_path.name}/{line.strip()}"
+                    )
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+
+    return errors
+
+
+def validate_all(
+    ai_dir: Path,
+    schemas_dir: Path,
+    project_root: Path | None = None,
+) -> dict[str, list[str]]:
     """Validate all canonical YAML files against their schemas.
+
+    Also checks submodule integrity if project_root is provided.
 
     Returns {filename: [errors]} dict.
     """
@@ -119,5 +154,13 @@ def validate_all(ai_dir: Path, schemas_dir: Path) -> dict[str, list[str]]:
             results[yaml_name] = [f"Schema not found: {schema_path}"]
             continue
         results[yaml_name] = validate_file(yaml_path, schema_path)
+
+    # Submodule integrity check
+    if project_root is not None:
+        sub_errors = validate_submodule_integrity(project_root)
+        if sub_errors:
+            results["submodule_integrity"] = sub_errors
+        else:
+            results["submodule_integrity"] = []
 
     return results

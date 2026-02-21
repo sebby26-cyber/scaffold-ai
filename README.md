@@ -108,6 +108,8 @@ Load `.ai/AGENTS.md` as your operating protocol, align to the current project st
 
 This is the single activation prompt. It works with Claude Code, OpenAI Codex CLI, and Cursor (partial support). These tools may auto-load protocol files, but this prompt guarantees correct behavior.
 
+After activation, the system will show the help guide automatically (or tell you to say "help"). This shows you everything you can ask it to do.
+
 ### Step 3 — Talk to it
 
 Once active, just say what you need:

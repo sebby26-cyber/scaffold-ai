@@ -471,8 +471,14 @@ def run_loop(project_root: Path):
     if import_msg:
         print(f"  {import_msg}")
 
+    # Auto-show help on startup
+    try:
+        help_output = handle_help(project_root)
+        print(help_output)
+    except Exception:
+        print('  Say "help" or type /help to see what you can ask me to do.')
+
     print("Scaffold AI running. Type commands or 'quit' to exit.")
-    print("Available: status, export-memory, import-memory, rehydrate-db, validate, git-sync")
     print("Session memory is active. All turns are persisted automatically.")
     print()
 

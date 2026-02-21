@@ -29,6 +29,7 @@ On every new session, do these steps in order:
 4. **Locate runtime** — verify `.ai_runtime/` exists. If not, run `ai init`.
 5. **Quick health check** — run `ai validate` to confirm YAML integrity.
 6. **Confirm ready** — print "Protocol loaded." and proceed.
+7. **Surface help** — show the human prompt guide (run `ai help`), or instruct: "Say 'help' to see what you can ask me to do."
 
 If any step fails, stop and report the exact failure. Do not improvise around it.
 

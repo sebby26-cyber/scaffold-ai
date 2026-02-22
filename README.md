@@ -35,6 +35,9 @@ One orchestrator leads. Workers execute. State is tracked in plain YAML, committ
 - **Automatic persistence** — every turn saved, memory exported on exit, imported on startup
 - **Portable context** — memory packs let you resume on any machine
 - **Safety gates** — approval triggers pause execution until a human decides
+- **Multi-provider workers** — Claude, Codex, Gemini, and any future CLI tool; provider + model per role
+- **Auto-recovery** — workers that stall or hit token limits are checkpointed and resumed automatically
+- **Stays focused** — scope guardrails prevent drift outside project boundaries
 - **Works with any AI model** — no vendor lock-in, no API keys in the framework itself
 - **Submodule-ready** — engine updates via pointer bump, never touches your project state
 
@@ -112,16 +115,17 @@ After activation, the system will show the help guide automatically (or tell you
 
 ### Step 3 — Talk to it
 
-Once active, just say what you need:
+Once active, just say what you need. You don't need exact wording — the system understands common phrasing.
 
 - **"Show me the current status"** — see project state and progress
 - **"What's been completed and what's next?"** — task overview
 - **"Start or initialize the project"** — set up from scratch
-- **"Save current progress"** — export memory for continuity
-- **"Set up a team: 3 Codex devs + 1 Claude designer"** — configure workers with provider/model
+- **"Save everything now"** — force flush state + checkpoint workers
+- **"Set up a team: 3 Codex devs + 1 Gemini analyst + 1 Claude designer"** — configure workers with provider/model
 - **"Spawn worker bees"** — activate workers in parallel
+- **"Resume stalled workers"** — recover workers that hit token limits
 - **"Show me what each worker is doing"** — check worker status
-- **"Validate the project"** — check state integrity
+- **"What's in scope?"** — see project boundaries
 - **"Help"** — see the full prompt guide
 
 The system maps your intent to the right action automatically. No commands to memorize.
@@ -138,7 +142,10 @@ This system uses AI tools installed on your computer. You need to install and lo
 |------|--------|----------------|
 | Claude Code | Fully supported | [Installation guide](https://docs.anthropic.com/en/docs/claude-code/overview) |
 | OpenAI Codex CLI | Fully supported | [Installation guide](https://github.com/openai/codex) |
+| Gemini CLI | Supported (pass-through) | [Gemini CLI](https://ai.google.dev/gemini-api/docs) |
 | Cursor | Partial support | [Getting started](https://docs.cursor.com) |
+
+Add new providers by editing `.ai/state/providers.yaml` — no code changes needed.
 
 Install the CLI for the AI you want to use and log in to your account. Follow the official setup instructions from each provider.
 
@@ -223,12 +230,20 @@ You interact using natural language. No commands to memorize. The orchestrator t
 
 | You say | What happens |
 |---------|-------------|
-| "Set up a team: 3 Codex devs + 1 Claude designer" | Parses spec, writes team.yaml with provider/model per role |
+| "Set up a team: 3 Codex devs + 1 Claude designer + 1 Gemini analyst" | Parses spec, writes team.yaml with provider/model per role |
 | "Spawn worker bees" | Generates role prompts, writes registry, prints CLI commands |
 | "Show me what each worker is doing" | Shows worker status from registry |
+| "Resume stalled workers" | Recovers workers that hit token limits or went silent |
 | "Stop all workers" | Marks workers as stopped |
 
-Under the hood, the system creates role tickets for each worker, generates a provider-specific prompt file, and gives you the exact CLI command to run per worker in a separate terminal.
+**State and scope:**
+
+| You say | What happens |
+|---------|-------------|
+| "Save everything now" | Force flush state + checkpoint all workers |
+| "What's in scope?" | Shows project boundaries and guardrails |
+
+Under the hood, the system creates role tickets for each worker, generates a provider-specific prompt file, and gives you the exact CLI command to run per worker in a separate terminal. State is auto-flushed on every task transition, worker change, and decision — no manual save needed.
 
 ---
 
@@ -251,6 +266,15 @@ Under the hood, the system creates role tickets for each worker, generates a pro
 | `ai memory export` | Export session memory pack | `.ai_runtime/` only |
 | `ai memory import --in PATH` | Import session memory pack | `.ai_runtime/` only |
 | `ai memory purge` | Purge session memory | `.ai_runtime/session/` only |
+| `ai force-sync` | Force flush state + checkpoint workers | `.ai/state/` + `.ai_runtime/` |
+| `ai spawn-workers` | Spawn worker bees | `.ai_runtime/workers/` |
+| `ai workers-status` | Show worker status | Nothing (read-only) |
+| `ai stop-workers` | Stop all workers | `.ai_runtime/workers/` |
+| `ai configure-team` | Configure team from spec | `.ai/state/team.yaml` |
+| `ai workers-resume` | Resume stalled workers | `.ai_runtime/workers/` |
+| `ai workers-pause` | Pause + checkpoint a worker | `.ai_runtime/workers/` |
+| `ai workers-restart` | Restart a worker from scratch | `.ai_runtime/workers/` |
+| `ai scope` | Show project scope boundaries | Nothing (read-only) |
 
 ---
 

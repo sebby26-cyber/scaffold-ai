@@ -35,7 +35,11 @@ def compute_canonical_hash(ai_dir: Path) -> str:
     """Compute a hash of all canonical YAML files to detect changes."""
     state_dir = ai_dir / "state"
     h = hashlib.sha256()
-    for name in sorted(["team.yaml", "board.yaml", "approvals.yaml", "commands.yaml", "capabilities.yaml"]):
+    for name in sorted([
+        "team.yaml", "board.yaml", "approvals.yaml", "commands.yaml",
+        "capabilities.yaml", "providers.yaml", "intents.yaml",
+        "persistence.yaml", "recovery.yaml", "project.yaml",
+    ]):
         fpath = state_dir / name
         if fpath.exists():
             h.update(fpath.read_bytes())
@@ -45,12 +49,21 @@ def compute_canonical_hash(ai_dir: Path) -> str:
 def load_canonical(ai_dir: Path) -> dict:
     """Load all canonical YAML state files into a single dict."""
     state_dir = ai_dir / "state"
-    return {
+    result = {
         "team": _load_yaml(state_dir / "team.yaml"),
         "board": _load_yaml(state_dir / "board.yaml"),
         "approvals": _load_yaml(state_dir / "approvals.yaml"),
         "commands": _load_yaml(state_dir / "commands.yaml"),
     }
+    # Optional new state files (don't fail if missing)
+    for name in ["providers", "intents", "persistence", "recovery", "project", "capabilities"]:
+        path = state_dir / f"{name}.yaml"
+        if path.exists():
+            try:
+                result[name] = _load_yaml(path)
+            except Exception:
+                pass
+    return result
 
 
 def save_canonical(ai_dir: Path, state: dict):

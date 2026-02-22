@@ -52,7 +52,7 @@ def generate_help(project_root: Path, adapter: dict | None = None) -> HelpGuide:
 
     # --- Prompt categories (human-first, intent-mapped) ---
     capabilities = _load_capabilities(ai_dir)
-    categories = _build_prompt_categories(capabilities)
+    categories = _build_prompt_categories(capabilities, ai_dir)
     if adapter.get("extra_categories"):
         for cat in adapter["extra_categories"]:
             categories.append(HelpCategory(
@@ -100,6 +100,11 @@ def generate_help(project_root: Path, adapter: dict | None = None) -> HelpGuide:
     # --- File locations ---
     file_locations = [
         HelpFileLocation(".ai/state/", "Canonical project state (team, board, approvals) — committed to git"),
+        HelpFileLocation(".ai/state/providers.yaml", "Provider registry (CLI tools, models, aliases)"),
+        HelpFileLocation(".ai/state/intents.yaml", "Intent registry (natural language routing)"),
+        HelpFileLocation(".ai/state/project.yaml", "Project scope definition (guardrails)"),
+        HelpFileLocation(".ai/state/recovery.yaml", "Worker recovery configuration"),
+        HelpFileLocation(".ai/state/persistence.yaml", "Auto-flush and sync configuration"),
         HelpFileLocation(".ai/STATUS.md", "Auto-generated project status snapshot"),
         HelpFileLocation(".ai/DECISIONS.md", "Append-only decision log"),
         HelpFileLocation(".ai/METADATA.yaml", "Project ID and skeleton version"),
@@ -107,6 +112,7 @@ def generate_help(project_root: Path, adapter: dict | None = None) -> HelpGuide:
         HelpFileLocation(".ai_runtime/session/memory.db", "Session memory database"),
         HelpFileLocation(".ai_runtime/import_inbox/", "Drop memory packs here for auto-import"),
         HelpFileLocation(".ai_runtime/memory_packs/", "Auto-exported memory packs on exit"),
+        HelpFileLocation(".ai_runtime/workers/checkpoints/", "Worker checkpoint data (auto-recovery)"),
     ]
 
     return HelpGuide(
@@ -133,14 +139,29 @@ def _load_capabilities(ai_dir: Path) -> dict:
     return {}
 
 
-def _build_prompt_categories(capabilities: dict | None = None) -> list[HelpCategory]:
-    """Build human-first intent categories with deterministic command mappings."""
+def _build_prompt_categories(capabilities: dict | None = None, ai_dir: Path | None = None) -> list[HelpCategory]:
+    """Build human-first intent categories with deterministic command mappings.
+
+    If intents.yaml exists, builds categories from it (grouped by category field).
+    Otherwise falls back to hardcoded categories.
+    """
+    # Try to build from intents.yaml
+    if ai_dir:
+        intents_path = ai_dir / "state" / "intents.yaml"
+        if intents_path.exists() and yaml is not None:
+            try:
+                result = _build_categories_from_intents(intents_path, capabilities)
+                if result:
+                    return result
+            except Exception:
+                pass  # Fall through to hardcoded
+
     capabilities = capabilities or {}
 
     categories = [
         HelpCategory(
             name="Getting Started",
-            icon="\U0001f680",  # 🚀
+            icon="\U0001f680",  # rocket
             intents=[
                 HelpIntent("Start or initialize the project", "ai init"),
                 HelpIntent("Resume where we left off", "ai run"),
@@ -148,71 +169,47 @@ def _build_prompt_categories(capabilities: dict | None = None) -> list[HelpCateg
         ),
         HelpCategory(
             name="Project Visibility",
-            icon="\U0001f4ca",  # 📊
+            icon="\U0001f4ca",  # chart
             intents=[
                 HelpIntent("Show me the current status", "ai status"),
                 HelpIntent("What's been completed and what's next?", "ai status"),
                 HelpIntent("Are there any blockers?", "ai status"),
             ],
         ),
-    ]
-
-    # Worker bees category — driven by capabilities.yaml
-    worker_cfg = capabilities.get("worker_bees", {})
-    if worker_cfg.get("supported"):
-        categories.append(HelpCategory(
+        HelpCategory(
             name="Parallel Work (Worker Bees)",
-            icon="\U0001f41d",  # 🐝
+            icon="\U0001f41d",  # bee
             intents=[
                 HelpIntent(
-                    "Set up a team: 3 Codex devs + 1 Claude designer",
+                    "Set up a team: 3 Codex devs + 1 Claude designer + 1 Gemini analyst",
                     "ai configure-team",
                     description="Parses your spec, writes team.yaml with provider/model per role",
                 ),
-                HelpIntent(
-                    "Spawn worker bees",
-                    "ai spawn-workers",
-                    description="Generates role prompts, writes registry, prints CLI commands to run",
-                ),
-                HelpIntent(
-                    "Show me what each worker is doing",
-                    "ai workers-status",
-                    description="Reads worker registry and shows status per worker",
-                ),
-                HelpIntent(
-                    "Stop all workers",
-                    "ai stop-workers",
-                    description="Marks all workers as stopped in the registry",
-                ),
-                HelpIntent(
-                    "Use Codex for coding, Claude for design",
-                    "ai configure-team",
-                    description="Provider/model selection per role — stored in team.yaml",
-                ),
+                HelpIntent("Spawn worker bees", "ai spawn-workers"),
+                HelpIntent("Show me what each worker is doing", "ai workers-status"),
+                HelpIntent("Stop all workers", "ai stop-workers"),
             ],
-        ))
-    else:
-        categories.append(HelpCategory(
-            name="Parallel Work (Worker Bees)",
-            icon="\U0001f41d",  # 🐝
+        ),
+        HelpCategory(
+            name="Worker Recovery",
+            icon="\U0001f6e0",  # wrench
             intents=[
-                HelpIntent(
-                    "Parallel workers are supported but not configured yet",
-                    "",
-                    description="Add capabilities.yaml with worker_bees.supported: true",
-                ),
-                HelpIntent(
-                    "Set up worker bees for this project",
-                    "ai configure-team",
-                    description="Configure roles, count, provider, and model",
-                ),
+                HelpIntent("Resume stalled workers", "ai workers-resume"),
+                HelpIntent("Restart the stuck worker", "ai workers-restart"),
             ],
-        ))
-
-    categories.extend([
+        ),
+        HelpCategory(
+            name="State Persistence",
+            icon="\U0001f4be",  # floppy
+            intents=[
+                HelpIntent("Save everything now", "ai force-sync",
+                           description="Flush state + checkpoint workers"),
+                HelpIntent("Update project state", "ai force-sync"),
+            ],
+        ),
         HelpCategory(
             name="Memory & Continuity",
-            icon="\U0001f9e0",  # 🧠
+            icon="\U0001f9e0",  # brain
             intents=[
                 HelpIntent("Save current progress", "ai export-memory"),
                 HelpIntent("Export project memory", "ai memory export"),
@@ -221,14 +218,78 @@ def _build_prompt_categories(capabilities: dict | None = None) -> list[HelpCateg
         ),
         HelpCategory(
             name="System Actions",
-            icon="\u2699\ufe0f",  # ⚙️
+            icon="\u2699\ufe0f",  # gear
             intents=[
                 HelpIntent("Validate the project", "ai validate"),
                 HelpIntent("Sync project state", "ai git-sync"),
                 HelpIntent("Check if everything is working", "ai validate"),
             ],
         ),
-    ])
+        HelpCategory(
+            name="Scope Guardrails",
+            icon="\U0001f6e1",  # shield
+            intents=[
+                HelpIntent("What's in scope for this project?", "ai scope"),
+                HelpIntent("Add this to project scope", "ai scope"),
+            ],
+        ),
+    ]
+
+    return categories
+
+
+# Category metadata for intents.yaml grouping
+_CATEGORY_META = {
+    "getting_started": ("Getting Started", "\U0001f680"),
+    "visibility": ("Project Visibility", "\U0001f4ca"),
+    "workers": ("Parallel Work (Worker Bees)", "\U0001f41d"),
+    "recovery": ("Worker Recovery", "\U0001f6e0"),
+    "persistence": ("State Persistence", "\U0001f4be"),
+    "memory": ("Memory & Continuity", "\U0001f9e0"),
+    "system": ("System Actions", "\u2699\ufe0f"),
+    "guardrails": ("Scope Guardrails", "\U0001f6e1"),
+}
+
+# Display order for categories
+_CATEGORY_ORDER = [
+    "getting_started", "visibility", "workers", "recovery",
+    "persistence", "memory", "system", "guardrails",
+]
+
+
+def _build_categories_from_intents(intents_path: Path, capabilities: dict | None) -> list[HelpCategory]:
+    """Build HelpCategories from intents.yaml, grouping by category field."""
+    data = yaml.safe_load(intents_path.read_text()) or {}
+    intents = data.get("intents", [])
+    if not intents:
+        return []
+
+    # Group by category
+    groups: dict[str, list] = {}
+    for intent in intents:
+        cat = intent.get("category", "other")
+        groups.setdefault(cat, []).append(intent)
+
+    categories = []
+    # Process in defined order, then any remaining
+    ordered_cats = [c for c in _CATEGORY_ORDER if c in groups]
+    remaining = [c for c in groups if c not in _CATEGORY_ORDER]
+
+    for cat_id in ordered_cats + remaining:
+        cat_intents = groups[cat_id]
+        name, icon = _CATEGORY_META.get(cat_id, (cat_id.replace("_", " ").title(), ""))
+
+        help_intents = []
+        for i in cat_intents:
+            examples = i.get("examples", [])
+            prompt = examples[0] if examples else i.get("id", "")
+            aliases = i.get("aliases", [])
+            command = f"ai {aliases[0].lstrip('/')}" if aliases else ""
+            # Use remaining examples as description
+            desc = ", ".join(f'"{e}"' for e in examples[1:3]) if len(examples) > 1 else ""
+            help_intents.append(HelpIntent(prompt=prompt, command=command, description=desc))
+
+        categories.append(HelpCategory(name=name, icon=icon, intents=help_intents))
 
     return categories
 
@@ -334,11 +395,28 @@ def _build_commands(ai_dir: Path) -> list[HelpCommand]:
         HelpCommand("migrate", "Apply new template files", "ai migrate"),
     ]
 
-    # Add session memory commands
+    # Session memory commands
     core.extend([
         HelpCommand("memory export", "Export session memory pack", "ai memory export"),
         HelpCommand("memory import", "Import session memory pack", "ai memory import --in pack.zip"),
         HelpCommand("memory purge", "Purge session memory", "ai memory purge --ns orchestrator --days 30"),
+    ])
+
+    # Worker commands
+    core.extend([
+        HelpCommand("spawn-workers", "Spawn worker bees", "ai spawn-workers"),
+        HelpCommand("workers-status", "Show worker status", "ai workers-status"),
+        HelpCommand("stop-workers", "Stop all workers", "ai stop-workers"),
+        HelpCommand("configure-team", "Configure team roles", "ai configure-team"),
+        HelpCommand("workers-resume", "Resume stalled workers", "ai workers-resume"),
+        HelpCommand("workers-pause", "Pause a worker", "ai workers-pause --worker_id dev-1"),
+        HelpCommand("workers-restart", "Restart a worker", "ai workers-restart --worker_id dev-1"),
+    ])
+
+    # Persistence + scope commands
+    core.extend([
+        HelpCommand("force-sync", "Force flush state + checkpoint", "ai force-sync"),
+        HelpCommand("scope", "Show/check project scope", "ai scope"),
     ])
 
     return core

@@ -136,15 +136,25 @@ def validate_all(
 
     Returns {filename: [errors]} dict.
     """
-    mapping = {
+    # Required files (must exist)
+    required_mapping = {
         "team.yaml": "team.schema.json",
         "board.yaml": "board.schema.json",
         "approvals.yaml": "approvals.schema.json",
         "commands.yaml": "commands.schema.json",
     }
 
+    # Optional files (skip if missing)
+    optional_mapping = {
+        "providers.yaml": "providers.schema.json",
+        "intents.yaml": "intents.schema.json",
+        "persistence.yaml": "persistence.schema.json",
+        "recovery.yaml": "recovery.schema.json",
+        "project.yaml": "project.schema.json",
+    }
+
     results = {}
-    for yaml_name, schema_name in mapping.items():
+    for yaml_name, schema_name in required_mapping.items():
         yaml_path = ai_dir / "state" / yaml_name
         schema_path = schemas_dir / schema_name
         if not yaml_path.exists():
@@ -152,6 +162,16 @@ def validate_all(
             continue
         if not schema_path.exists():
             results[yaml_name] = [f"Schema not found: {schema_path}"]
+            continue
+        results[yaml_name] = validate_file(yaml_path, schema_path)
+
+    for yaml_name, schema_name in optional_mapping.items():
+        yaml_path = ai_dir / "state" / yaml_name
+        schema_path = schemas_dir / schema_name
+        if not yaml_path.exists():
+            continue  # Optional — skip silently
+        if not schema_path.exists():
+            results[yaml_name] = []  # File exists but no schema yet — pass
             continue
         results[yaml_name] = validate_file(yaml_path, schema_path)
 

@@ -24,15 +24,8 @@ except ImportError:
     yaml = None  # type: ignore[assignment]
 
 
-# ── Provider → CLI mapping ──
-
-PROVIDER_CLI = {
-    "anthropic": "claude",
-    "claude": "claude",
-    "openai": "codex",
-    "codex": "codex",
-    "cursor": "cursor",
-}
+# Provider registry is now loaded from providers.yaml via ai_providers module.
+# See engine/ai_providers.py for the extensible provider registry.
 
 # ── Role keyword → role_id mapping ──
 
@@ -92,25 +85,10 @@ ROLE_DEPARTMENTS = {
 }
 
 
-def _load_default_models(project_root: Path) -> dict:
-    """Load default provider→model mapping from canonical state or templates."""
-    for base in [project_root / ".ai" / "state", project_root]:
-        path = base / "default_models.yaml"
-        if path.exists() and yaml is not None:
-            try:
-                data = yaml.safe_load(path.read_text()) or {}
-                return data.get("defaults", {})
-            except Exception:
-                pass
-
-    # Hardcoded fallback
-    return {
-        "anthropic": {"model": "claude-sonnet-4-5-20250929"},
-        "claude": {"model": "claude-sonnet-4-5-20250929"},
-        "openai": {"model": "codex-mini"},
-        "codex": {"model": "codex-mini"},
-        "cursor": {"model": "cursor-default"},
-    }
+def _get_default_model(provider_name: str, project_root: Path) -> str:
+    """Get default model for a provider via the provider registry."""
+    from . import ai_providers
+    return ai_providers.get_default_model(provider_name, project_root)
 
 
 def parse_team_spec(text: str, project_root: Path | None = None) -> list[dict]:
@@ -123,15 +101,23 @@ def parse_team_spec(text: str, project_root: Path | None = None) -> list[dict]:
 
     Returns list of role dicts ready for team.yaml.
     """
-    defaults = _load_default_models(project_root) if project_root else {}
+    from . import ai_providers
+
+    # Build dynamic provider name list from registry
+    alias_map = ai_providers.build_provider_alias_map(project_root) if project_root else {}
+    if alias_map:
+        all_names = "|".join(re.escape(k) for k in sorted(alias_map.keys(), key=len, reverse=True))
+    else:
+        all_names = "codex|claude|anthropic|openai|cursor|gemini|google"
+
     roles: list[dict] = []
 
     # Pattern: <count> <provider> <role_words>
-    # e.g. "3 Codex backend devs", "1 Claude UI designer"
+    # e.g. "3 Codex backend devs", "1 Gemini analyst"
     pattern = re.compile(
-        r"(\d+)\s+"                       # count
-        r"(codex|claude|anthropic|openai|cursor)\s+"  # provider
-        r"([\w\s]+?)(?:,|and\b|$)",       # role words
+        rf"(\d+)\s+"                       # count
+        rf"({all_names})\s+"               # provider (dynamic from registry)
+        r"([\w\s/&]+?)(?:,|and\b|$)",      # role words
         re.IGNORECASE,
     )
 
@@ -140,7 +126,7 @@ def parse_team_spec(text: str, project_root: Path | None = None) -> list[dict]:
     if not matches:
         # Try "Use <provider> for <role>" pattern
         use_pattern = re.compile(
-            r"(codex|claude|anthropic|openai|cursor)\s+for\s+([\w\s]+?)(?:,|and\b|$)",
+            rf"({all_names})\s+for\s+([\w\s]+?)(?:,|and\b|$)",
             re.IGNORECASE,
         )
         use_matches = use_pattern.findall(text)
@@ -150,6 +136,9 @@ def parse_team_spec(text: str, project_root: Path | None = None) -> list[dict]:
     for count_str, provider, role_words in matches:
         count = int(count_str)
         provider_lower = provider.lower()
+
+        # Canonicalize provider via alias map
+        canonical_provider = alias_map.get(provider_lower, provider_lower) if alias_map else provider_lower
 
         # Resolve role (check longest keywords first)
         role_words_clean = role_words.strip().rstrip("s").lower()
@@ -164,15 +153,14 @@ def parse_team_spec(text: str, project_root: Path | None = None) -> list[dict]:
         title = ROLE_TITLES.get(role_id, role_id.replace("_", " ").title())
         department = ROLE_DEPARTMENTS.get(role_id, "engineering")
 
-        # Resolve model
-        model_info = defaults.get(provider_lower, {})
-        model = model_info.get("model", "default")
+        # Resolve model from provider registry
+        model = _get_default_model(canonical_provider, project_root) if project_root else "default"
 
         workers = []
         for i in range(1, count + 1):
             workers.append({
                 "id": f"{role_id}-{i}",
-                "provider": provider_lower,
+                "provider": canonical_provider,
                 "model": model,
             })
 
@@ -321,9 +309,18 @@ def spawn_workers(project_root: Path) -> str:
 
     lines = [f"Spawning {len(workers)} worker(s):\n"]
 
+    from . import ai_providers
+
     for w in workers:
-        cli = PROVIDER_CLI.get(w["provider"], w["provider"])
+        cli = ai_providers.get_cli_command(w["provider"], project_root)
+        model_arg = ai_providers.get_model_arg(w["provider"], project_root)
         prompt_path = w["prompt_path"]
+
+        # Build CLI command with optional model flag
+        cmd_parts = [cli, "--prompt", prompt_path]
+        if model_arg and w["model"] and w["model"] != "default":
+            cmd_parts.extend([model_arg, w["model"]])
+        run_cmd = " ".join(cmd_parts)
 
         entry = {
             "worker_id": w["worker_id"],
@@ -333,13 +330,17 @@ def spawn_workers(project_root: Path) -> str:
             "prompt_path": prompt_path,
             "cli": cli,
             "status": "ready",
+            "last_heartbeat_at": None,
+            "last_output_at": None,
+            "last_checkpoint_id": None,
+            "retry_count": 0,
         }
         registry["workers"].append(entry)
 
         lines.append(f"  {w['worker_id']} ({w['role']})")
         lines.append(f"    Provider: {w['provider']} | Model: {w['model']}")
         lines.append(f"    Prompt:   {prompt_path}")
-        lines.append(f"    Run:      {cli} --prompt {prompt_path}")
+        lines.append(f"    Run:      {run_cmd}")
         lines.append("")
 
     # Write registry
@@ -375,7 +376,14 @@ def get_worker_status(project_root: Path) -> str:
     for w in workers:
         lines.append(f"  {w['worker_id']} ({w['role']})")
         lines.append(f"    Provider: {w['provider']} | Model: {w['model']}")
-        lines.append(f"    Status:   {w.get('status', '?')}")
+        status = w.get('status', '?')
+        lines.append(f"    Status:   {status}")
+        if w.get("last_heartbeat_at"):
+            lines.append(f"    Last heartbeat: {w['last_heartbeat_at']}")
+        if w.get("last_checkpoint_id"):
+            lines.append(f"    Last checkpoint: {w['last_checkpoint_id']}")
+        if w.get("retry_count", 0) > 0:
+            lines.append(f"    Retries: {w['retry_count']}")
         lines.append("")
 
     return "\n".join(lines)

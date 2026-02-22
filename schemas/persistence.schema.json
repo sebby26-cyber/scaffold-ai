@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Auto-Flush Persistence Configuration",
+  "type": "object",
+  "properties": {
+    "auto_flush": {
+      "type": "object",
+      "properties": {
+        "on_task_transition": { "type": "boolean", "default": true },
+        "on_decision_recorded": { "type": "boolean", "default": true },
+        "on_worker_status_change": { "type": "boolean", "default": true },
+        "debounce_seconds": { "type": "integer", "minimum": 0, "default": 5 }
+      }
+    },
+    "force_sync_includes_git": { "type": "boolean", "default": false }
+  }
+}

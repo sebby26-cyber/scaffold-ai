@@ -1,0 +1,15 @@
+# Persistence Configuration
+# Controls when canonical state is auto-flushed to disk.
+
+auto_flush:
+  # Flush state when tasks move between kanban columns
+  on_task_transition: true
+  # Flush state when a decision is logged
+  on_decision_recorded: true
+  # Flush state when worker status changes (spawn/stop/stall/resume)
+  on_worker_status_change: true
+  # Minimum seconds between flushes (prevents thrashing)
+  debounce_seconds: 5
+
+# Whether force-sync also runs git-sync (default: false, user must opt-in)
+force_sync_includes_git: false

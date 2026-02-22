@@ -1,0 +1,197 @@
+# Intent Registry — maps ALL capabilities to natural language triggers.
+# The intent router reads this file. Commands.yaml remains the command registry.
+# Intents are the PRIMARY interface; commands are SECONDARY.
+
+intents:
+  # ── Getting Started ──
+  - id: init_project
+    handler: handle_init
+    aliases: ["/init", "init"]
+    keywords: [initialize, start, setup, "set up", begin, create]
+    examples:
+      - "Start or initialize the project"
+      - "Set up this project"
+    category: getting_started
+
+  - id: show_help
+    handler: handle_help
+    aliases: ["/help", "help", "/guide", "guide", "/commands"]
+    keywords: [help, guide, commands, usage, "how do I", "what can"]
+    examples:
+      - "What can you do?"
+      - "Guide me"
+      - "What can I say?"
+    category: getting_started
+
+  # ── Project Visibility ──
+  - id: show_status
+    handler: handle_status
+    aliases: ["/status", "status", "/status report"]
+    keywords: [status, progress, blockers, dashboard, overview, "how's it going", update]
+    examples:
+      - "Show me the current status"
+      - "What's been completed and what's next?"
+      - "Are there any blockers?"
+      - "How's the project going?"
+      - "Where are we at?"
+    category: visibility
+
+  # ── Parallel Work (Worker Bees) ──
+  - id: configure_team
+    handler: handle_configure_team
+    aliases: ["/configure-team", "configure-team"]
+    keywords: [team, "set up", "worker bees", configure, roles, workers]
+    examples:
+      - "Set up a team: 3 Codex devs + 1 Claude designer"
+      - "3 Gemini analysts and 2 Codex backend devs"
+      - "Use Gemini for research, Codex for coding, Claude for design"
+    category: workers
+
+  - id: spawn_workers
+    handler: handle_spawn_workers
+    aliases: ["/spawn-workers", "spawn-workers"]
+    keywords: [spawn, "spin up", activate, launch, parallel, "worker bees"]
+    examples:
+      - "Spawn worker bees"
+      - "Spin up the team"
+      - "Run tasks in parallel"
+      - "Launch agents"
+    category: workers
+
+  - id: worker_status
+    handler: handle_workers_status
+    aliases: ["/workers-status", "workers-status"]
+    keywords: ["worker status", "what each worker", "worker doing"]
+    examples:
+      - "Show me what each worker is doing"
+      - "Worker status"
+    category: workers
+
+  - id: stop_workers
+    handler: handle_stop_workers
+    aliases: ["/stop-workers", "stop-workers"]
+    keywords: [stop, halt, workers, "stop all"]
+    examples:
+      - "Stop all workers"
+      - "Stop workers"
+    category: workers
+
+  # ── Worker Recovery ──
+  - id: resume_workers
+    handler: handle_workers_resume
+    aliases: ["/workers-resume", "workers-resume"]
+    keywords: [resume, restart, recover, unstick, stalled, stuck, hung]
+    examples:
+      - "Resume stalled workers"
+      - "Restart the stuck worker"
+      - "Restart all stalled workers"
+    category: recovery
+
+  - id: pause_workers
+    handler: handle_workers_pause
+    aliases: ["/workers-pause", "workers-pause"]
+    keywords: [pause, checkpoint]
+    examples:
+      - "Pause worker dev-1"
+      - "Checkpoint and pause workers"
+    category: recovery
+
+  # ── State Persistence ──
+  - id: force_sync
+    handler: handle_force_sync
+    aliases: ["/force-sync", "force-sync", "/sync"]
+    keywords: [flush, sync, persist, save, checkpoint, "save everything", update]
+    examples:
+      - "Save everything now"
+      - "Force sync state"
+      - "Update project state"
+      - "Save progress now"
+      - "Sync everything and show what changed"
+      - "Create a checkpoint"
+    category: persistence
+
+  # ── Memory & Continuity ──
+  - id: export_memory
+    handler: handle_export_memory
+    aliases: ["/export-memory", "export-memory"]
+    keywords: [export, save, memory, progress, backup]
+    examples:
+      - "Save current progress"
+      - "Export memory"
+    category: memory
+
+  - id: import_memory
+    handler: handle_import_memory
+    aliases: ["/import-memory", "import-memory"]
+    keywords: [import, restore, load, memory, session, resume]
+    examples:
+      - "Restore previous session"
+      - "Import memory"
+      - "Load memory"
+    category: memory
+
+  - id: session_memory_export
+    handler: handle_session_memory_export
+    aliases: ["/memory-export", "memory-export"]
+    keywords: ["session memory", "export session"]
+    examples:
+      - "Export project memory"
+      - "Export session memory"
+    category: memory
+
+  - id: session_memory_import
+    handler: handle_session_memory_import
+    aliases: ["/memory-import", "memory-import"]
+    keywords: ["import session", "load session"]
+    examples:
+      - "Import session memory"
+    category: memory
+
+  # ── System Actions ──
+  - id: validate
+    handler: handle_validate
+    aliases: ["/validate", "validate"]
+    keywords: [validate, check, verify, health, integrity]
+    examples:
+      - "Validate the project"
+      - "Check if everything is working"
+    category: system
+
+  - id: git_sync
+    handler: handle_git_sync
+    aliases: ["/git-sync", "git-sync"]
+    keywords: [git, commit, "sync to git"]
+    examples:
+      - "Sync project state"
+      - "Commit state to git"
+    category: system
+
+  - id: rehydrate_db
+    handler: handle_rehydrate_db
+    aliases: ["/rehydrate-db", "rehydrate-db"]
+    keywords: [rehydrate, rebuild, database, db]
+    examples:
+      - "Rebuild the database"
+      - "Rebuild state from logs"
+    category: system
+
+  - id: migrate
+    handler: handle_migrate
+    aliases: ["/migrate", "migrate"]
+    keywords: [migrate, upgrade, templates]
+    examples:
+      - "Apply new templates"
+      - "Migrate templates"
+    category: system
+
+  # ── Scope Guardrails ──
+  - id: check_scope
+    handler: handle_check_scope
+    aliases: ["/scope", "scope"]
+    keywords: [scope, "in scope", "out of scope", boundaries, focused]
+    examples:
+      - "What's in scope for this project?"
+      - "Is this within scope?"
+      - "Show project scope"
+      - "Add this to project scope"
+    category: guardrails

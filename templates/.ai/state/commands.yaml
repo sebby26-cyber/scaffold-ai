@@ -147,3 +147,56 @@ commands:
       - "configure team"
     handler: handle_configure_team
     description: Parse team spec and write to team.yaml
+
+  - name: workers-resume
+    aliases:
+      - "/workers-resume"
+      - "resume stalled workers"
+      - "resume worker"
+      - "restart stalled worker"
+      - "unstick workers"
+    handler: handle_workers_resume
+    description: Resume stalled or paused workers from checkpoint
+
+  - name: workers-pause
+    aliases:
+      - "/workers-pause"
+      - "pause worker"
+      - "checkpoint worker"
+    handler: handle_workers_pause
+    description: Pause a worker and save checkpoint
+
+  - name: workers-restart
+    aliases:
+      - "/workers-restart"
+      - "restart worker"
+      - "restart all workers"
+    handler: handle_workers_restart
+    description: Restart a worker from scratch
+
+  - name: force-sync
+    aliases:
+      - "/force-sync"
+      - "/sync"
+      - "save everything"
+      - "save everything now"
+      - "flush state"
+      - "force sync"
+      - "persist now"
+      - "save progress now"
+      - "update project state"
+      - "sync everything"
+      - "create a checkpoint"
+    handler: handle_force_sync
+    description: Force flush state + checkpoint all workers
+
+  - name: scope
+    aliases:
+      - "/scope"
+      - "what's in scope"
+      - "is this in scope"
+      - "show scope"
+      - "show project scope"
+      - "project boundaries"
+    handler: handle_check_scope
+    description: Show or check project scope boundaries

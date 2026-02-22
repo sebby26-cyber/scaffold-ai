@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import ai_db, ai_git, ai_init, ai_memory, ai_state, ai_validate
+from . import ai_intents, ai_scope, ai_persistence, ai_recovery
 
 
 def _load_adapter_data(project_root: Path) -> dict | None:
@@ -259,6 +260,57 @@ def handle_configure_team(project_root: Path, spec: str = "", **kwargs) -> str:
     return ai_workers.apply_team_spec(project_root, roles)
 
 
+# ── Recovery Handlers ──
+
+
+def handle_workers_resume(project_root: Path, worker_id: str = "", **kwargs) -> str:
+    """Resume stalled or paused workers."""
+    if worker_id:
+        return ai_recovery.resume_worker(project_root, worker_id)
+    stalled = ai_recovery.detect_stalled_workers(project_root)
+    if not stalled:
+        return "No stalled workers detected."
+    results = []
+    for w in stalled:
+        results.append(ai_recovery.resume_worker(project_root, w["worker_id"]))
+    return "\n".join(results)
+
+
+def handle_workers_pause(project_root: Path, worker_id: str = "", **kwargs) -> str:
+    """Pause a worker and save checkpoint."""
+    if not worker_id:
+        return "Specify a worker_id to pause. Example: /workers-pause --worker_id dev-1"
+    return ai_recovery.pause_worker(project_root, worker_id)
+
+
+def handle_workers_restart(project_root: Path, worker_id: str = "", **kwargs) -> str:
+    """Restart a worker from scratch."""
+    if not worker_id:
+        return "Specify a worker_id to restart. Example: /workers-restart --worker_id dev-1"
+    return ai_recovery.restart_worker(project_root, worker_id)
+
+
+# ── Persistence Handlers ──
+
+
+def handle_force_sync(project_root: Path, **kwargs) -> str:
+    """Force flush state + checkpoint all workers."""
+    git = kwargs.get("git", False)
+    return ai_persistence.force_sync(project_root, git_sync=bool(git))
+
+
+# ── Scope Handlers ──
+
+
+def handle_check_scope(project_root: Path, text: str = "", **kwargs) -> str:
+    """Show or check project scope boundaries."""
+    if not text:
+        return ai_scope.format_scope(project_root)
+    result = ai_scope.check_scope(text, project_root)
+    label = "IN SCOPE" if result["in_scope"] else "OUT OF SCOPE"
+    return f"Scope check: {label} — {result['reason']}"
+
+
 # ── Command Registry ──
 
 
@@ -278,6 +330,11 @@ HANDLERS = {
     "handle_workers_status": handle_workers_status,
     "handle_stop_workers": handle_stop_workers,
     "handle_configure_team": handle_configure_team,
+    "handle_workers_resume": handle_workers_resume,
+    "handle_workers_pause": handle_workers_pause,
+    "handle_workers_restart": handle_workers_restart,
+    "handle_force_sync": handle_force_sync,
+    "handle_check_scope": handle_check_scope,
 }
 
 
@@ -303,19 +360,54 @@ def load_command_registry(project_root: Path) -> dict:
 
 
 def dispatch_command(project_root: Path, command: str, **kwargs) -> str:
-    """Dispatch a command string to its handler."""
+    """Dispatch a command string to its handler.
+
+    Resolution order:
+    1. Scope gate (warn/block if out of scope)
+    2. Intent router (natural language → handler via intents.yaml)
+    3. Command registry (commands.yaml alias lookup)
+    """
+    scope_warning = ""
+
+    # 1. Scope gate
+    try:
+        gate_msg = ai_scope.scope_gate(command, project_root)
+        if gate_msg:
+            scope_data = ai_scope.load_scope(project_root)
+            enforcement = scope_data.get("scope", {}).get("enforcement", "off")
+            if enforcement == "block":
+                return gate_msg
+            scope_warning = gate_msg + "\n\n"
+    except Exception:
+        pass  # Don't block on scope check failures
+
+    # 2. Try intent router first (natural language matching)
+    try:
+        intent_result = ai_intents.resolve_intent(command, project_root)
+        if intent_result:
+            handler_name, confidence, intent_id = intent_result
+            if confidence >= 0.5:
+                handler = HANDLERS.get(handler_name)
+                if handler:
+                    result = handler(project_root, **kwargs)
+                    return scope_warning + result if scope_warning else result
+    except Exception:
+        pass  # Fall through to command registry
+
+    # 3. Fall back to commands.yaml alias lookup
     registry = load_command_registry(project_root)
     normalized = command.lower().strip().lstrip("/")
 
     handler_name = registry.get(normalized)
     if not handler_name:
-        return f"Unknown command: '{command}'. Run 'ai --help' for available commands."
+        return f"Unknown command: '{command}'. Say 'help' or run /help for available commands."
 
     handler = HANDLERS.get(handler_name)
     if not handler:
         return f"Handler '{handler_name}' not implemented."
 
-    return handler(project_root, **kwargs)
+    result = handler(project_root, **kwargs)
+    return scope_warning + result if scope_warning else result
 
 
 # ── Auto-Persistence Helpers ──
@@ -579,6 +671,19 @@ def run_loop(project_root: Path):
 
             # Persist command response
             mem.add_message(session_id, "orchestrator", "assistant", result)
+
+            # Auto-flush state on state-changing commands
+            state_changing_cmds = {
+                "status", "git-sync", "validate", "spawn-workers",
+                "stop-workers", "configure-team", "workers-resume",
+                "workers-restart", "force-sync",
+            }
+            cmd_lower = command.lower().lstrip("/")
+            if cmd_lower in state_changing_cmds:
+                try:
+                    ai_persistence.auto_flush(project_root, "task_transition")
+                except Exception:
+                    pass  # Non-critical
 
             # Log state-changing commands as canonical events
             state_cmds = {"status", "git-sync", "validate", "migrate", "rehydrate-db"}

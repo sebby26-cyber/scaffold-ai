@@ -43,37 +43,16 @@ if skeleton_dir not in sys.path:
     sys.path.insert(0, skeleton_dir)
 
 from engine import ai_git, ai_init, ai_run
+from engine.cli_commands import cli_help_command_lines
 
 
 def print_help():
+    command_lines = "\n".join(cli_help_command_lines())
     print("""
 Scaffold AI — CLI
 
 Commands:
-  init                        Initialize .ai/ and .ai_runtime/ in the project
-  run                         Start the interactive orchestrator loop
-  help [--json]               Context-aware help and usage guide
-  status                      Generate and print project status report
-  validate [--full|--hygiene]  Validate YAML / full harness / repo hygiene
-  export-memory [--out PATH]  Export memory pack for portability
-  import-memory --in PATH     Import a memory pack
-  rehydrate-db                Rebuild SQLite DB from canonical YAML
-  git-sync                    Commit canonical state files to git
-  migrate                     Apply new template files (non-destructive)
-  force-sync [--git]          Force flush state + checkpoint all workers
-  spawn-workers               Generate worker prompts and spawn worker bees
-  workers-status              Show current status of all worker bees
-  stop-workers                Stop all active worker bees
-  configure-team --spec TEXT  Parse team spec and write to team.yaml
-  workers-resume              Resume stalled or paused workers
-  workers-pause --worker_id ID  Pause a worker and save checkpoint
-  workers-restart --worker_id ID  Restart a worker from scratch
-  checkpoint-workers          Force checkpoint all active workers
-  show-checkpoints            Show latest checkpoint per worker
-  scope [--text TEXT]         Show or check project scope boundaries
-  memory export [--out PATH]  Export session memory pack (advanced)
-  memory import --in PATH     Import session memory pack (advanced)
-  memory purge [--ns NS]      Purge session memory (advanced)
+{command_lines}
 
 Options:
   --help, -h                  Show this help message
@@ -86,7 +65,7 @@ Examples (submodule usage):
   python vendor/scaffold-ai/engine/ai status
   python vendor/scaffold-ai/engine/ai validate --full
   python vendor/scaffold-ai/engine/ai force-sync
-""")
+""".format(command_lines=command_lines))
 
 
 def run_full_validation(project_root):

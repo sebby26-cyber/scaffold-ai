@@ -10,6 +10,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
+from ..cli_commands import cli_example_for_alias, help_json_commands
 from .model import (
     HelpCategory,
     HelpCommand,
@@ -291,7 +292,7 @@ def _build_categories_from_intents(intents_path: Path, capabilities: dict | None
             examples = i.get("examples", [])
             prompt = examples[0] if examples else i.get("id", "")
             aliases = i.get("aliases", [])
-            command = f"ai {aliases[0].lstrip('/')}" if aliases else ""
+            command = (cli_example_for_alias(aliases[0]) or "") if aliases else ""
             # Use remaining examples as description
             desc = ", ".join(f'"{e}"' for e in examples[1:3]) if len(examples) > 1 else ""
             help_intents.append(HelpIntent(prompt=prompt, command=command, description=desc))
@@ -389,41 +390,9 @@ def _build_quick_start(state: HelpCurrentState, ai_dir: Path) -> list[str]:
 
 
 def _build_commands(ai_dir: Path) -> list[HelpCommand]:
-    """Build command list from commands.yaml if available."""
-    # Always include core commands
-    core = [
-        HelpCommand("help", "Show this guide", "ai help"),
-        HelpCommand("status", "Project status report", "ai status"),
-        HelpCommand("validate", "Validate YAML against schemas", "ai validate"),
-        HelpCommand("git-sync", "Commit canonical state to git", "ai git-sync"),
-        HelpCommand("export-memory", "Export memory pack", "ai export-memory --out pack.zip"),
-        HelpCommand("import-memory", "Import a memory pack", "ai import-memory --in pack.zip"),
-        HelpCommand("rehydrate-db", "Rebuild local DB from YAML", "ai rehydrate-db"),
-        HelpCommand("migrate", "Apply new template files", "ai migrate"),
+    """Build command list from the shared CLI command registry."""
+    del ai_dir  # Commands are sourced from the CLI registry, not YAML.
+    return [
+        HelpCommand(item["name"], item["description"], item["example"])
+        for item in help_json_commands()
     ]
-
-    # Session memory commands
-    core.extend([
-        HelpCommand("memory export", "Export session memory pack", "ai memory export"),
-        HelpCommand("memory import", "Import session memory pack", "ai memory import --in pack.zip"),
-        HelpCommand("memory purge", "Purge session memory", "ai memory purge --ns orchestrator --days 30"),
-    ])
-
-    # Worker commands
-    core.extend([
-        HelpCommand("spawn-workers", "Spawn worker bees", "ai spawn-workers"),
-        HelpCommand("workers-status", "Show worker status", "ai workers-status"),
-        HelpCommand("stop-workers", "Stop all workers", "ai stop-workers"),
-        HelpCommand("configure-team", "Configure team roles", "ai configure-team"),
-        HelpCommand("workers-resume", "Resume stalled workers", "ai workers-resume"),
-        HelpCommand("workers-pause", "Pause a worker", "ai workers-pause --worker_id dev-1"),
-        HelpCommand("workers-restart", "Restart a worker", "ai workers-restart --worker_id dev-1"),
-    ])
-
-    # Persistence + scope commands
-    core.extend([
-        HelpCommand("force-sync", "Force flush state + checkpoint", "ai force-sync"),
-        HelpCommand("scope", "Show/check project scope", "ai scope"),
-    ])
-
-    return core

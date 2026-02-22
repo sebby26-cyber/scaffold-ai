@@ -1,0 +1,29 @@
+# AI Team Configuration
+# Defines the orchestrator, roles, and worker assignments.
+
+orchestrator:
+  role_id: orchestrator
+  title: Orchestrator
+  authority: write
+
+roles:
+  - role_id: developer
+    title: Developer
+    department: engineering
+    reports_to: orchestrator
+    authority: read
+    workers: []
+
+  - role_id: reviewer
+    title: Code Reviewer
+    department: engineering
+    reports_to: orchestrator
+    authority: review
+    workers: []
+
+  - role_id: pm
+    title: Project Manager
+    department: management
+    reports_to: orchestrator
+    authority: read
+    workers: []

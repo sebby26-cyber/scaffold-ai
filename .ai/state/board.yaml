@@ -1,0 +1,11 @@
+# AI Task Board
+# Kanban-style board tracking all project tasks.
+
+columns:
+  - backlog
+  - ready
+  - in_progress
+  - review
+  - done
+
+tasks: []

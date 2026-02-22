@@ -1,0 +1,9 @@
+# Skeleton Version Lock
+# Written by bootstrap and updated on each successful compatibility check.
+# If the skeleton submodule is updated and this lock no longer matches,
+# the bootstrap gate will detect the change and require re-validation.
+
+skeleton_version: PLACEHOLDER
+skeleton_commit: PLACEHOLDER
+locked_at: PLACEHOLDER
+capabilities_version: "1.0"

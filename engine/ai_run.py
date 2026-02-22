@@ -374,7 +374,15 @@ def handle_show_checkpoints(project_root: Path, **kwargs) -> str:
 # ── Command Registry ──
 
 
+def handle_init(project_root: Path, **kwargs) -> str:
+    """Initialize project (wrapper for ai_init.init)."""
+    interactive = kwargs.get("interactive", False)
+    ai_init.init(project_root, interactive=interactive)
+    return "Initialization complete."
+
+
 HANDLERS = {
+    "handle_init": handle_init,
     "handle_status": handle_status,
     "handle_help": handle_help,
     "handle_export_memory": handle_export_memory,
@@ -664,6 +672,7 @@ def run_loop(project_root: Path):
         print("  [WARN] .ai/AGENTS.md not found. Run 'ai init' to create it.")
 
     # Build/refresh system index from skeleton submodule
+    skeleton_dir = None
     try:
         from . import system_index
         skeleton_dir = ai_init.find_skeleton_dir()
@@ -672,6 +681,19 @@ def run_loop(project_root: Path):
         print(f"  System index ready ({cmd_count} commands indexed).")
     except Exception:
         pass  # Non-critical: index is a cache optimization
+
+    # ── Bootstrap Step 2: Compatibility Gate ──
+    try:
+        from . import ai_compat
+        if skeleton_dir is None:
+            skeleton_dir = ai_init.find_skeleton_dir()
+        ready, gate_msg = ai_compat.run_bootstrap_gate(project_root, skeleton_dir)
+        print(gate_msg)
+        if not ready:
+            print("\n  [WARN] System is NOT fully ready. Some features may be unavailable.")
+            print("  Run 'ai validate --full' for details.\n")
+    except Exception as e:
+        print(f"  [WARN] Compatibility gate skipped: {e}")
 
     # Auto-import from inbox
     import_msg = _auto_import_inbox(project_root)

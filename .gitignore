@@ -12,6 +12,8 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.bak
+.tmp/
+.tmp_cache/
 
 # AI runtime (local cache, never committed)
 .ai_runtime/

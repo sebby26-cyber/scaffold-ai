@@ -705,7 +705,7 @@ def test_help_guide():
         assert guide.project_name, "project_name missing"
         assert guide.current_state.initialized, "Should detect as initialized"
         assert len(guide.quick_start_steps) >= 2, "Quick start should have at least 2 steps"
-        assert len(guide.common_prompts) >= 5, "Should have at least 5 common prompts"
+        assert len(guide.prompt_categories) >= 2, "Should have at least 2 prompt categories"
         assert len(guide.commands) >= 8, "Should have at least 8 commands"
         assert len(guide.how_to_resume_on_new_machine) >= 3, "Resume steps should have at least 3"
         assert len(guide.troubleshooting) >= 3, "Should have at least 3 troubleshooting tips"
@@ -763,6 +763,134 @@ def test_help_command_handler():
         shutil.rmtree(str(tmpdir))
 
 
+# ─── Test 21: Capabilities contract check ───
+
+def test_capabilities_contract():
+    from engine.ai_compat import check_capabilities
+    from engine.ai_init import copy_templates, setup_runtime
+
+    tmpdir = make_test_project()
+    skel = Path(skeleton_dir)
+    try:
+        copy_templates(skel, tmpdir)
+        setup_runtime(tmpdir)
+
+        result = check_capabilities(tmpdir)
+        assert result["status"] == "PASS", \
+            f"Capabilities check failed: missing={result['missing']}"
+        assert result["advertised_count"] > 0, "No advertised capabilities found"
+        assert result["implemented_count"] > 0, "No implemented capabilities matched"
+        assert len(result["missing"]) == 0, \
+            f"Missing capabilities: {result['missing']}"
+    finally:
+        shutil.rmtree(str(tmpdir))
+
+
+# ─── Test 22: Intent routing accuracy ───
+
+def test_intent_routing():
+    from engine.ai_intents import resolve_intent
+    from engine.ai_init import copy_templates, setup_runtime
+
+    tmpdir = make_test_project()
+    skel = Path(skeleton_dir)
+    try:
+        copy_templates(skel, tmpdir)
+        setup_runtime(tmpdir)
+
+        test_cases = [
+            ("help", "handle_help"),
+            ("status", "handle_status"),
+            ("save everything", "handle_force_sync"),
+            ("save progress", "handle_force_sync"),
+            ("spawn workers", "handle_spawn_workers"),
+            ("validate", "handle_validate"),
+            ("what's in scope", "handle_check_scope"),
+            ("worker status", "handle_workers_status"),
+            ("export memory", "handle_export_memory"),
+            ("checkpoint all workers", "handle_checkpoint_workers"),
+        ]
+
+        for phrase, expected_handler in test_cases:
+            result = resolve_intent(phrase, tmpdir)
+            assert result is not None, f"No intent match for '{phrase}'"
+            assert result[0] == expected_handler, \
+                f"'{phrase}' -> {result[0]} (expected {expected_handler})"
+    finally:
+        shutil.rmtree(str(tmpdir))
+
+
+# ─── Test 23: Skeleton lock write/read ───
+
+def test_skeleton_lock():
+    from engine.ai_compat import write_skeleton_lock, load_skeleton_lock, check_skeleton_update
+    from engine.ai_init import copy_templates, setup_runtime
+
+    tmpdir = make_test_project()
+    skel = Path(skeleton_dir)
+    try:
+        copy_templates(skel, tmpdir)
+        setup_runtime(tmpdir)
+
+        lock = write_skeleton_lock(tmpdir, skel)
+        assert lock.get("skeleton_version"), "No version in lock"
+        assert lock.get("skeleton_commit"), "No commit in lock"
+
+        loaded = load_skeleton_lock(tmpdir)
+        assert loaded.get("skeleton_version") == lock["skeleton_version"]
+
+        update = check_skeleton_update(tmpdir, skel)
+        assert not update["changed"], "Lock should match current skeleton"
+    finally:
+        shutil.rmtree(str(tmpdir))
+
+
+# ─── Test 24: All HANDLERS have matching advertised capability ───
+
+def test_handler_coverage():
+    from engine.ai_run import HANDLERS
+    from engine.ai_compat import load_advertised_capabilities
+    from engine.ai_init import copy_templates, setup_runtime
+
+    tmpdir = make_test_project()
+    skel = Path(skeleton_dir)
+    try:
+        copy_templates(skel, tmpdir)
+        setup_runtime(tmpdir)
+
+        caps = load_advertised_capabilities(tmpdir)
+        advertised_handlers = {cap["handler"] for cap in caps}
+
+        # Every advertised handler must exist
+        for h in advertised_handlers:
+            assert h in HANDLERS, f"Advertised handler '{h}' not in HANDLERS dict"
+    finally:
+        shutil.rmtree(str(tmpdir))
+
+
+# ─── Test 25: Force sync (save everything) works ───
+
+def test_force_sync():
+    from engine.ai_run import handle_force_sync
+    from engine.ai_init import copy_templates, setup_runtime
+
+    tmpdir = make_test_project()
+    skel = Path(skeleton_dir)
+    try:
+        copy_templates(skel, tmpdir)
+        setup_runtime(tmpdir)
+
+        from engine.ai_state import reconcile
+        reconcile(tmpdir / ".ai", tmpdir / ".ai_runtime")
+
+        result = handle_force_sync(tmpdir)
+        assert "reconciled" in result.lower() or "state" in result.lower(), \
+            f"Force sync result unexpected: {result}"
+        assert "STATUS.md" in result, "Force sync should update STATUS.md"
+    finally:
+        shutil.rmtree(str(tmpdir))
+
+
 # ─── Run all ───
 
 def main():
@@ -797,6 +925,11 @@ def main():
     check("Init creates autopersist dirs", test_init_creates_autopersist_dirs)
     check("Help/guide generation", test_help_guide)
     check("Help command handler", test_help_command_handler)
+    check("Capabilities contract", test_capabilities_contract)
+    check("Intent routing accuracy", test_intent_routing)
+    check("Skeleton lock write/read", test_skeleton_lock)
+    check("Handler coverage", test_handler_coverage)
+    check("Force sync (save everything)", test_force_sync)
 
     print(f"\n{'=' * 40}")
     print(f"  Results: {passed} passed, {failed} failed")

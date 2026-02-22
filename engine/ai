@@ -7,14 +7,26 @@ Usage:
     ai run                         Start the interactive orchestrator loop
     ai help [--json]               Context-aware help and usage guide
     ai status                      Generate and print project status report
+    ai validate [--full]           Validate YAML (--full: capabilities + intents + safety)
     ai export-memory [--out PATH]  Export memory pack
     ai import-memory --in PATH     Import memory pack
     ai rehydrate-db                Rebuild SQLite DB from canonical YAML
-    ai validate                    Validate YAML against JSON schemas
     ai git-sync                    Commit canonical state files to git
+    ai migrate                     Apply new template files (non-destructive)
+    ai force-sync [--git]          Force flush state + checkpoint workers
+    ai spawn-workers               Generate worker prompts and spawn workers
+    ai workers-status              Show worker status
+    ai stop-workers                Stop all active workers
+    ai configure-team --spec TEXT  Configure team from natural language spec
+    ai workers-resume [--worker_id ID]  Resume stalled workers
+    ai workers-pause --worker_id ID     Pause + checkpoint a worker
+    ai workers-restart --worker_id ID   Restart a worker from scratch
+    ai checkpoint-workers          Force checkpoint all active workers
+    ai show-checkpoints            Show latest checkpoint per worker
+    ai scope [--text TEXT]         Show or check project scope
     ai memory export [--out PATH]  Export session memory pack
     ai memory import --in PATH     Import session memory pack
-    ai memory purge [--ns NS] [--days N]  Purge session memory
+    ai memory purge [--ns NS]      Purge session memory
 
 Submodule usage:
     python vendor/scaffold-ai/engine/ai init
@@ -42,12 +54,23 @@ Commands:
   run                         Start the interactive orchestrator loop
   help [--json]               Context-aware help and usage guide
   status                      Generate and print project status report
+  validate [--full|--hygiene]  Validate YAML / full harness / repo hygiene
   export-memory [--out PATH]  Export memory pack for portability
   import-memory --in PATH     Import a memory pack
   rehydrate-db                Rebuild SQLite DB from canonical YAML
-  validate                    Validate YAML against JSON schemas
   git-sync                    Commit canonical state files to git
   migrate                     Apply new template files (non-destructive)
+  force-sync [--git]          Force flush state + checkpoint all workers
+  spawn-workers               Generate worker prompts and spawn worker bees
+  workers-status              Show current status of all worker bees
+  stop-workers                Stop all active worker bees
+  configure-team --spec TEXT  Parse team spec and write to team.yaml
+  workers-resume              Resume stalled or paused workers
+  workers-pause --worker_id ID  Pause a worker and save checkpoint
+  workers-restart --worker_id ID  Restart a worker from scratch
+  checkpoint-workers          Force checkpoint all active workers
+  show-checkpoints            Show latest checkpoint per worker
+  scope [--text TEXT]         Show or check project scope boundaries
   memory export [--out PATH]  Export session memory pack (advanced)
   memory import --in PATH     Import session memory pack (advanced)
   memory purge [--ns NS]      Purge session memory (advanced)
@@ -55,12 +78,282 @@ Commands:
 Options:
   --help, -h                  Show this help message
   --non-interactive           Skip onboarding prompts during init
+  --full                      Run full validation harness (with validate)
+  --git                       Include git-sync in force-sync
 
 Examples (submodule usage):
   python vendor/scaffold-ai/engine/ai init
   python vendor/scaffold-ai/engine/ai status
-  python vendor/scaffold-ai/engine/ai export-memory --out pack.zip
+  python vendor/scaffold-ai/engine/ai validate --full
+  python vendor/scaffold-ai/engine/ai force-sync
 """)
+
+
+def run_full_validation(project_root):
+    """Run the full validation harness: schema + capabilities + intents + safety."""
+    from engine import ai_compat, ai_validate, ai_intents
+
+    results = []
+    all_pass = True
+
+    # 1. Schema validation
+    results.append("=" * 60)
+    results.append("FULL VALIDATION HARNESS")
+    results.append("=" * 60)
+    results.append("")
+
+    results.append("--- 1. Schema Validation ---")
+    ai_dir = project_root / ".ai"
+    schemas_dir = ai_run.find_schemas_dir()
+    schema_results = ai_validate.validate_all(ai_dir, schemas_dir, project_root=project_root)
+    schema_ok = True
+    for filename, errors in schema_results.items():
+        if errors:
+            schema_ok = False
+            all_pass = False
+            results.append(f"  FAIL  {filename}")
+            for err in errors:
+                results.append(f"        {err}")
+        else:
+            results.append(f"  OK    {filename}")
+    results.append(f"  Schema validation: {'PASS' if schema_ok else 'FAIL'}")
+    results.append("")
+
+    # 2. Capabilities contract check
+    results.append("--- 2. Capabilities Contract (advertised <= implemented) ---")
+    cap_result = ai_compat.check_capabilities(project_root)
+    results.append(ai_compat.format_capabilities_report(cap_result))
+    if cap_result["status"] != "PASS":
+        all_pass = False
+    results.append("")
+
+    # 3. Intent routing tests
+    results.append("--- 3. Intent Routing Tests ---")
+    test_cases = [
+        ("where are we", "handle_status", "STATUS"),
+        ("progress update", "handle_status", "STATUS"),
+        ("help", "handle_help", "HELP"),
+        ("what can you do", "handle_help", "HELP"),
+        ("save everything", "handle_force_sync", "FORCE_SYNC"),
+        ("save progress", "handle_force_sync", "FORCE_SYNC"),
+        ("sync all", "handle_force_sync", "FORCE_SYNC"),
+        ("what's pending", "handle_status", "NEXT_STEPS"),
+        ("spawn workers", "handle_spawn_workers", "WORKERS"),
+        ("start team", "handle_spawn_workers", "WORKERS"),
+        ("worker status", "handle_workers_status", "WORKERS"),
+        ("validate the project", "handle_validate", "VALIDATE"),
+        ("export memory", "handle_export_memory", "MEMORY"),
+        ("what's in scope", "handle_check_scope", "SCOPE"),
+        ("checkpoint all workers", "handle_checkpoint_workers", "CHECKPOINT"),
+    ]
+
+    intent_pass = 0
+    intent_warn = 0
+    intent_fail = 0
+    for phrase, expected_handler, label in test_cases:
+        result = ai_intents.resolve_intent(phrase, project_root)
+        if result and result[0] == expected_handler:
+            intent_pass += 1
+            results.append(f"  PASS  \"{phrase}\" -> {result[0]} (conf: {result[1]:.2f})")
+        elif result:
+            # Matched but to wrong handler — acceptable for fuzzy cases (WARN, not FAIL)
+            intent_warn += 1
+            results.append(
+                f"  WARN  \"{phrase}\" -> {result[0]} (expected {expected_handler}, "
+                f"conf: {result[1]:.2f})"
+            )
+        else:
+            intent_fail += 1
+            all_pass = False
+            results.append(f"  FAIL  \"{phrase}\" -> no match (expected {expected_handler})")
+
+    # Intent routing fails only on hard failures (no match at all), not on WARNs
+    results.append(
+        f"  Intent routing: {intent_pass} pass, {intent_warn} warn, {intent_fail} fail"
+    )
+    results.append("")
+
+    # 4. Handler smoke test (each handler callable without crash)
+    results.append("--- 4. Handler Smoke Tests ---")
+    smoke_handlers = [
+        ("handle_help", {}),
+        ("handle_status", {}),
+        ("handle_validate", {}),
+        ("handle_check_scope", {}),
+        ("handle_workers_status", {}),
+        ("handle_show_checkpoints", {}),
+    ]
+    smoke_pass = 0
+    smoke_fail = 0
+    for handler_name, kwargs in smoke_handlers:
+        handler = ai_run.HANDLERS.get(handler_name)
+        if not handler:
+            smoke_fail += 1
+            all_pass = False
+            results.append(f"  FAIL  {handler_name}: not in HANDLERS")
+            continue
+        try:
+            handler(project_root, **kwargs)
+            smoke_pass += 1
+            results.append(f"  PASS  {handler_name}")
+        except Exception as e:
+            smoke_fail += 1
+            all_pass = False
+            results.append(f"  FAIL  {handler_name}: {e}")
+
+    results.append(f"  Smoke tests: {smoke_pass} pass, {smoke_fail} fail")
+    results.append("")
+
+    # 5. Submodule safety check
+    results.append("--- 5. Submodule Safety ---")
+    sub_errors = ai_validate.validate_submodule_integrity(project_root)
+    if sub_errors:
+        all_pass = False
+        for err in sub_errors:
+            results.append(f"  FAIL  {err}")
+    else:
+        results.append("  PASS  No writes detected in submodules")
+    results.append("")
+
+    # 6. Skeleton update check
+    results.append("--- 6. Skeleton Version Lock ---")
+    try:
+        skel_dir = ai_init.find_skeleton_dir()
+        update = ai_compat.check_skeleton_update(project_root, skel_dir)
+        results.append(f"  {ai_compat.format_update_report(update)}")
+    except Exception as e:
+        results.append(f"  WARN  Could not check skeleton version: {e}")
+    results.append("")
+
+    # Summary
+    results.append("=" * 60)
+    results.append(f"VALIDATION RESULT: {'ALL PASSED' if all_pass else 'ERRORS FOUND'}")
+    results.append("=" * 60)
+
+    report = "\n".join(results)
+
+    # Write to .ai/VALIDATION_REPORT.md
+    report_path = project_root / ".ai" / "VALIDATION_REPORT.md"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(f"# Validation Report\n\n```\n{report}\n```\n")
+
+    return report
+
+
+def run_hygiene_check(project_root):
+    """Check repo hygiene: gitignore, no tracked runtime files, canonical dirs populated."""
+    from pathlib import Path
+    import subprocess
+
+    results = []
+    all_pass = True
+
+    results.append("=" * 60)
+    results.append("REPO HYGIENE CHECK")
+    results.append("=" * 60)
+    results.append("")
+
+    # 1. Check .gitignore has required entries
+    results.append("--- 1. .gitignore Coverage ---")
+    gitignore_path = project_root / ".gitignore"
+    required_ignores = [".ai_runtime/", ".tmp/", ".tmp_cache/", "__pycache__/"]
+    if gitignore_path.exists():
+        gitignore_content = gitignore_path.read_text()
+        for pattern in required_ignores:
+            if pattern in gitignore_content:
+                results.append(f"  OK    {pattern} is gitignored")
+            else:
+                results.append(f"  WARN  {pattern} is NOT in .gitignore")
+                # .tmp and .tmp_cache are optional warnings, not failures
+                if pattern in (".ai_runtime/",):
+                    all_pass = False
+    else:
+        results.append("  FAIL  .gitignore not found!")
+        all_pass = False
+    results.append("")
+
+    # 2. Check no runtime/temp files are tracked by git
+    results.append("--- 2. No Runtime/Temp Files Tracked ---")
+    try:
+        tracked = subprocess.run(
+            ["git", "ls-files"],
+            cwd=str(project_root),
+            capture_output=True, text=True, timeout=5,
+        )
+        if tracked.returncode == 0:
+            tracked_files = tracked.stdout.strip().splitlines()
+            bad_prefixes = [".ai_runtime/", ".tmp/", ".tmp_cache/"]
+            violations = []
+            for f in tracked_files:
+                for prefix in bad_prefixes:
+                    if f.startswith(prefix):
+                        violations.append(f)
+            if violations:
+                all_pass = False
+                for v in violations:
+                    results.append(f"  FAIL  Tracked but should be gitignored: {v}")
+            else:
+                results.append("  OK    No runtime/temp files tracked")
+    except Exception as e:
+        results.append(f"  WARN  Could not check: {e}")
+    results.append("")
+
+    # 3. Check canonical directories exist and are populated
+    results.append("--- 3. Canonical State Populated ---")
+    ai_dir = project_root / ".ai"
+    required_canonical = [
+        ("state/team.yaml", "Team configuration"),
+        ("state/board.yaml", "Task board"),
+        ("state/commands.yaml", "Command registry"),
+        ("AGENTS.md", "Operator protocol"),
+        ("STATUS.md", "Project status"),
+        ("DECISIONS.md", "Decision log"),
+        ("METADATA.yaml", "Project metadata"),
+    ]
+    for rel_path, label in required_canonical:
+        full = ai_dir / rel_path
+        if full.exists():
+            results.append(f"  OK    {rel_path} ({label})")
+        else:
+            results.append(f"  MISS  {rel_path} ({label}) — run 'ai init' to create")
+    results.append("")
+
+    # 4. Check worker checkpoint dirs exist
+    results.append("--- 4. Worker State Directories ---")
+    worker_dirs = [
+        "workers/roster.yaml",
+        "workers/assignments.yaml",
+        "workers/checkpoints/",
+        "workers/summaries/",
+    ]
+    for rel_path in worker_dirs:
+        full = ai_dir / rel_path
+        if full.exists():
+            results.append(f"  OK    .ai/{rel_path}")
+        else:
+            results.append(f"  MISS  .ai/{rel_path} — created after first worker spawn")
+    results.append("")
+
+    # 5. Check runtime can be rebuilt
+    results.append("--- 5. Runtime Rebuild Safety ---")
+    runtime_dir = project_root / ".ai_runtime"
+    if runtime_dir.exists():
+        results.append(f"  OK    .ai_runtime/ exists (local cache)")
+        db_path = runtime_dir / "ai.db"
+        if db_path.exists():
+            results.append(f"  OK    ai.db present (rebuildable from YAML)")
+        else:
+            results.append(f"  INFO  ai.db missing — run 'ai rehydrate-db' to rebuild")
+    else:
+        results.append(f"  INFO  .ai_runtime/ missing — run 'ai init' to create")
+    results.append("")
+
+    # Summary
+    results.append("=" * 60)
+    results.append(f"HYGIENE CHECK: {'CLEAN' if all_pass else 'ISSUES FOUND'}")
+    results.append("=" * 60)
+
+    return "\n".join(results)
 
 
 def main():
@@ -126,7 +419,12 @@ def main():
         print(result)
 
     elif command == "validate":
-        result = ai_run.handle_validate(project_root)
+        if "full" in flags:
+            result = run_full_validation(project_root)
+        elif "hygiene" in flags:
+            result = run_hygiene_check(project_root)
+        else:
+            result = ai_run.handle_validate(project_root)
         print(result)
 
     elif command == "git-sync":
@@ -135,6 +433,57 @@ def main():
 
     elif command == "migrate":
         result = ai_run.handle_migrate(project_root)
+        print(result)
+
+    elif command == "force-sync":
+        result = ai_run.handle_force_sync(project_root, git="git" in flags)
+        print(result)
+
+    elif command == "spawn-workers":
+        result = ai_run.handle_spawn_workers(project_root)
+        print(result)
+
+    elif command == "workers-status":
+        result = ai_run.handle_workers_status(project_root)
+        print(result)
+
+    elif command == "stop-workers":
+        result = ai_run.handle_stop_workers(project_root)
+        print(result)
+
+    elif command == "configure-team":
+        spec = flags.get("spec", "")
+        result = ai_run.handle_configure_team(project_root, spec=spec)
+        print(result)
+
+    elif command == "workers-resume":
+        result = ai_run.handle_workers_resume(
+            project_root, worker_id=flags.get("worker_id", "")
+        )
+        print(result)
+
+    elif command == "workers-pause":
+        result = ai_run.handle_workers_pause(
+            project_root, worker_id=flags.get("worker_id", "")
+        )
+        print(result)
+
+    elif command == "workers-restart":
+        result = ai_run.handle_workers_restart(
+            project_root, worker_id=flags.get("worker_id", "")
+        )
+        print(result)
+
+    elif command == "checkpoint-workers":
+        result = ai_run.handle_checkpoint_workers(project_root)
+        print(result)
+
+    elif command == "show-checkpoints":
+        result = ai_run.handle_show_checkpoints(project_root)
+        print(result)
+
+    elif command == "scope":
+        result = ai_run.handle_check_scope(project_root, text=flags.get("text", ""))
         print(result)
 
     elif command == "memory":

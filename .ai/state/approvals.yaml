@@ -1,0 +1,25 @@
+# AI Approval Rules
+# Defines triggers that require explicit approval before proceeding.
+
+triggers:
+  - trigger_id: scope_change
+    description: Any change to project scope or requirements
+    condition: task.requires_approval contains 'scope_change'
+    required_approvals:
+      - user
+      - pm
+
+  - trigger_id: release
+    description: Any release or deployment action
+    condition: task.requires_approval contains 'release'
+    required_approvals:
+      - user
+
+  - trigger_id: architecture_change
+    description: Significant architectural modifications
+    condition: task.requires_approval contains 'architecture_change'
+    required_approvals:
+      - user
+      - reviewer
+
+approval_log: []

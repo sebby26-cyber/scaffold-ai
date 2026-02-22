@@ -1,0 +1,5 @@
+# Worker Roster — Canonical worker state (committed to git)
+# Auto-generated on spawn from team.yaml. Do not edit manually.
+# Each entry mirrors the runtime registry but persists across machines.
+
+workers: []

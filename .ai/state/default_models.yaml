@@ -1,0 +1,14 @@
+# Default provider → model mapping
+# Used as fallback when user omits model in team spec.
+
+defaults:
+  anthropic:
+    model: claude-sonnet-4-5-20250929
+  claude:
+    model: claude-sonnet-4-5-20250929
+  openai:
+    model: codex-mini
+  codex:
+    model: codex-mini
+  cursor:
+    model: cursor-default

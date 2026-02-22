@@ -1,0 +1,22 @@
+# AI System Capabilities
+# Canonical definition of what this system supports.
+# Help/guide reads from this file — do not hardcode capabilities elsewhere.
+
+worker_bees:
+  supported: true
+  max_concurrent_workers: 5
+  supported_worker_types:
+    - developer
+    - reviewer
+    - researcher
+    - designer
+    - pm
+  description: >
+    Run multiple worker bees in parallel across departments.
+    Each worker operates in a read-only lane with scoped tickets.
+    The orchestrator coordinates outputs and merges results.
+
+concurrency:
+  parallel_execution: true
+  lane_isolation: true
+  orchestrator_merge: true

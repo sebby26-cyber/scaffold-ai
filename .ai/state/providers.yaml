@@ -1,0 +1,43 @@
+# Provider Registry — extensible CLI provider definitions.
+# Add new providers here; the engine reads this instead of hardcoded mappings.
+#
+# Each provider entry:
+#   cli_command    — base CLI command to invoke
+#   model_arg     — flag for model selection (null if provider has no model param)
+#   default_model — used when user omits model in team spec
+#   supports_persistent_session — whether the CLI supports keeping sessions open
+#   aliases       — alternate names users can say (e.g. "claude" → anthropic)
+#   notes         — optional human note
+
+providers:
+  anthropic:
+    cli_command: claude
+    model_arg: --model
+    default_model: claude-sonnet-4-5-20250929
+    supports_persistent_session: true
+    aliases: [claude]
+    notes: "Claude Code CLI"
+
+  openai:
+    cli_command: codex
+    model_arg: --model
+    default_model: codex-mini
+    supports_persistent_session: false
+    aliases: [codex]
+    notes: "OpenAI Codex CLI"
+
+  cursor:
+    cli_command: cursor
+    model_arg: null
+    default_model: cursor-default
+    supports_persistent_session: true
+    aliases: []
+    notes: "Cursor IDE (partial support)"
+
+  google:
+    cli_command: gemini
+    model_arg: --model
+    default_model: gemini-2.5-pro
+    supports_persistent_session: false
+    aliases: [gemini]
+    notes: "Gemini CLI pass-through"

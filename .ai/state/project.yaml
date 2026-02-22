@@ -1,0 +1,18 @@
+# Project Scope Definition
+# The scope guardrail reads this file before executing any intent.
+# Update in_scope/out_of_scope to match your project's boundaries.
+
+project:
+  name: PLACEHOLDER
+  description: ""
+
+scope:
+  in_scope:
+    - "Tasks defined in board.yaml"
+    - "Features described in project documentation"
+  out_of_scope:
+    - "Modifications to the skeleton submodule"
+    - "Changes to other repositories"
+    - "Infrastructure provisioning without approval"
+  # warn = warn user but proceed | block = refuse execution | off = no checks
+  enforcement: warn

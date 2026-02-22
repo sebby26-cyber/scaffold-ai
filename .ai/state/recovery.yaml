@@ -1,0 +1,11 @@
+# Worker Recovery Configuration
+# Controls heartbeat monitoring, stall detection, and checkpoint behavior.
+
+# How long before a silent worker is considered stalled (seconds)
+stall_timeout_seconds: 120
+
+# Maximum resume attempts before escalating to user
+max_retries: 3
+
+# Whether to auto-checkpoint workers periodically
+checkpoint_enabled: true

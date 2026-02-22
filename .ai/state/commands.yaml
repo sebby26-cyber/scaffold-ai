@@ -1,0 +1,222 @@
+# AI Command Registry
+# Maps command names and aliases to handler functions.
+# Natural language aliases enable intent-based routing.
+
+commands:
+  - name: help
+    aliases:
+      - "/help"
+      - "guide"
+      - "guide me"
+      - "how do I use this"
+      - "what can you do"
+      - "what can I say"
+      - "show me the guide"
+      - "commands"
+    handler: handle_help
+    description: Show context-aware help and usage guide
+
+  - name: status
+    aliases:
+      - "/status"
+      - "status report"
+      - "generate status report"
+      - "show me the current status"
+      - "what's the progress"
+      - "what's been completed and what's next"
+      - "are there any blockers"
+      - "give me status"
+    handler: handle_status
+    description: Generate and display project status report
+
+  - name: init
+    aliases:
+      - "/init"
+      - "start the project"
+      - "initialize"
+      - "start or initialize the project"
+    handler: handle_init
+    description: Initialize project structure and runtime
+
+  - name: export-memory
+    aliases:
+      - "/export-memory"
+      - "save current progress"
+      - "save memory"
+      - "export memory"
+    handler: handle_export_memory
+    description: Export memory pack for portability
+
+  - name: import-memory
+    aliases:
+      - "/import-memory"
+      - "restore previous session"
+      - "load memory"
+      - "import memory"
+    handler: handle_import_memory
+    description: Import a memory pack
+
+  - name: rehydrate-db
+    aliases:
+      - "/rehydrate"
+      - "rebuild database"
+    handler: handle_rehydrate_db
+    description: Rebuild local SQLite DB from canonical YAML state
+
+  - name: validate
+    aliases:
+      - "/validate"
+      - "validate the project"
+      - "check if everything is working"
+      - "check the state"
+    handler: handle_validate
+    description: Validate YAML files against JSON schemas
+
+  - name: git-sync
+    aliases:
+      - "/git-sync"
+      - "sync project state"
+      - "commit state"
+      - "sync to git"
+    handler: handle_git_sync
+    description: Commit canonical AI state files to git
+
+  - name: migrate
+    aliases:
+      - "/migrate"
+    handler: handle_migrate
+    description: Apply new skeleton template files (non-destructive)
+
+  - name: memory-export
+    aliases:
+      - "/memory-export"
+      - "session-memory-export"
+      - "export project memory"
+    handler: handle_session_memory_export
+    description: Export session memory pack (advanced)
+
+  - name: memory-import
+    aliases:
+      - "/memory-import"
+      - "session-memory-import"
+    handler: handle_session_memory_import
+    description: Import session memory pack (advanced)
+
+  - name: memory-purge
+    aliases:
+      - "/memory-purge"
+      - "session-memory-purge"
+    handler: handle_session_memory_purge
+    description: Purge session memory by namespace or age (advanced)
+
+  - name: spawn-workers
+    aliases:
+      - "/spawn-workers"
+      - "spawn worker bees"
+      - "spin up worker bees"
+      - "spin up worker bees for this task"
+      - "run tasks in parallel"
+      - "run tasks in parallel across departments"
+    handler: handle_spawn_workers
+    description: Generate worker prompts and spawn worker bees
+
+  - name: workers-status
+    aliases:
+      - "/workers-status"
+      - "show me what each worker is doing"
+      - "worker status"
+      - "worker bees status"
+    handler: handle_workers_status
+    description: Show current status of all worker bees
+
+  - name: stop-workers
+    aliases:
+      - "/stop-workers"
+      - "stop all workers"
+      - "stop workers"
+      - "pause workers"
+    handler: handle_stop_workers
+    description: Stop all active worker bees
+
+  - name: configure-team
+    aliases:
+      - "/configure-team"
+      - "set up my team"
+      - "set up worker bees"
+      - "set up worker bees for this project"
+      - "configure team"
+    handler: handle_configure_team
+    description: Parse team spec and write to team.yaml
+
+  - name: workers-resume
+    aliases:
+      - "/workers-resume"
+      - "resume stalled workers"
+      - "resume worker"
+      - "restart stalled worker"
+      - "unstick workers"
+    handler: handle_workers_resume
+    description: Resume stalled or paused workers from checkpoint
+
+  - name: workers-pause
+    aliases:
+      - "/workers-pause"
+      - "pause worker"
+      - "checkpoint worker"
+    handler: handle_workers_pause
+    description: Pause a worker and save checkpoint
+
+  - name: workers-restart
+    aliases:
+      - "/workers-restart"
+      - "restart worker"
+      - "restart all workers"
+    handler: handle_workers_restart
+    description: Restart a worker from scratch
+
+  - name: force-sync
+    aliases:
+      - "/force-sync"
+      - "/sync"
+      - "save everything"
+      - "save everything now"
+      - "flush state"
+      - "force sync"
+      - "persist now"
+      - "save progress now"
+      - "update project state"
+      - "sync everything"
+      - "create a checkpoint"
+    handler: handle_force_sync
+    description: Force flush state + checkpoint all workers
+
+  - name: scope
+    aliases:
+      - "/scope"
+      - "what's in scope"
+      - "is this in scope"
+      - "show scope"
+      - "show project scope"
+      - "project boundaries"
+    handler: handle_check_scope
+    description: Show or check project scope boundaries
+
+  - name: checkpoint-workers
+    aliases:
+      - "/checkpoint-workers"
+      - "save worker progress"
+      - "save worker progress now"
+      - "checkpoint all workers"
+      - "checkpoint workers"
+    handler: handle_checkpoint_workers
+    description: Force checkpoint all active workers to canonical state
+
+  - name: show-checkpoints
+    aliases:
+      - "/show-checkpoints"
+      - "show me each worker's last checkpoint"
+      - "worker checkpoints"
+      - "show worker checkpoints"
+      - "what have workers done"
+    handler: handle_show_checkpoints
+    description: Show latest checkpoint per worker

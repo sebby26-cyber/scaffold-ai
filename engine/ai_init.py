@@ -328,6 +328,27 @@ def init(project_root: Path | None = None, interactive: bool = True):
     except Exception:
         print("  [WARN] System index build failed (non-critical)")
 
+    # 11) Write skeleton version lock
+    try:
+        from . import ai_compat
+        lock = ai_compat.write_skeleton_lock(project_root, skeleton_dir)
+        print(f"  [OK] Skeleton lock written (version: {lock.get('skeleton_version', '?')})")
+    except Exception:
+        print("  [WARN] Skeleton lock write failed (non-critical)")
+
+    # 12) Run compatibility gate
+    try:
+        from . import ai_compat
+        cap_result = ai_compat.check_capabilities(project_root)
+        print(f"  [OK] Capabilities check: {cap_result['status']} "
+              f"({cap_result['advertised_count']} advertised, "
+              f"{cap_result['implemented_count']} implemented)")
+        if cap_result['missing']:
+            for m in cap_result['missing']:
+                print(f"        MISSING: {m['id']} ({m['handler']})")
+    except Exception:
+        print("  [WARN] Capabilities check skipped (non-critical)")
+
     print("\nInitialization complete.")
     print(f"  Canonical state: {ai_dir}/state/")
     print(f"  Runtime cache:   {runtime_dir}/")

@@ -1,0 +1,8 @@
+project_id: cbe09958-812e-4191-be78-33f555e62fad
+skeleton_version: ab9fdcf
+initialized_at: '2026-02-22T15:15:44.387598+00:00'
+auto_push: false
+paths:
+  ai_dir: .ai
+  runtime_dir: .ai_runtime
+submodule_path: .

@@ -1,0 +1,161 @@
+# Advertised Capabilities Manifest
+# Source of truth for what this system claims to support.
+# Bootstrap compatibility gate reads this file and verifies every entry
+# has a matching handler in the engine. If any are missing, bootstrap FAILS.
+#
+# Format:
+#   - id: unique intent/feature identifier
+#     handler: Python handler function name (must exist in HANDLERS dict)
+#     aliases: human-friendly names
+#     category: grouping for help/guide
+#     required_files: state files that must exist for this to work
+#     min_engine_version: optional minimum skeleton version
+
+version: "1.0"
+
+capabilities:
+  # ── Getting Started ──
+  - id: init_project
+    handler: handle_init
+    aliases: ["init", "start the project", "initialize", "set up"]
+    category: getting_started
+    required_files: []
+
+  - id: show_help
+    handler: handle_help
+    aliases: ["help", "guide", "what can you do", "commands"]
+    category: getting_started
+    required_files: []
+
+  # ── Project Visibility ──
+  - id: show_status
+    handler: handle_status
+    aliases: ["status", "show me the current status", "progress", "where are we"]
+    category: visibility
+    required_files: ["state/team.yaml", "state/board.yaml"]
+
+  # ── Workers ──
+  - id: configure_team
+    handler: handle_configure_team
+    aliases: ["configure team", "set up my team", "set up a team"]
+    category: workers
+    required_files: ["state/team.yaml", "state/providers.yaml"]
+
+  - id: spawn_workers
+    handler: handle_spawn_workers
+    aliases: ["spawn workers", "spawn worker bees", "spin up team", "launch agents"]
+    category: workers
+    required_files: ["state/team.yaml", "state/providers.yaml"]
+
+  - id: worker_status
+    handler: handle_workers_status
+    aliases: ["worker status", "show me what each worker is doing"]
+    category: workers
+    required_files: []
+
+  - id: stop_workers
+    handler: handle_stop_workers
+    aliases: ["stop workers", "stop all workers", "halt workers"]
+    category: workers
+    required_files: []
+
+  - id: checkpoint_workers
+    handler: handle_checkpoint_workers
+    aliases: ["checkpoint workers", "checkpoint all workers", "save worker progress"]
+    category: workers
+    required_files: []
+
+  - id: show_checkpoints
+    handler: handle_show_checkpoints
+    aliases: ["show checkpoints", "worker checkpoints", "what have workers done"]
+    category: workers
+    required_files: []
+
+  # ── Worker Recovery ──
+  - id: resume_workers
+    handler: handle_workers_resume
+    aliases: ["resume workers", "resume stalled workers", "unstick workers"]
+    category: recovery
+    required_files: []
+
+  - id: pause_workers
+    handler: handle_workers_pause
+    aliases: ["pause worker", "checkpoint and pause"]
+    category: recovery
+    required_files: []
+
+  - id: restart_workers
+    handler: handle_workers_restart
+    aliases: ["restart worker", "restart all workers"]
+    category: recovery
+    required_files: []
+
+  # ── Persistence ──
+  - id: force_sync
+    handler: handle_force_sync
+    aliases: ["save everything", "save everything now", "force sync", "sync all", "save progress", "checkpoint everything"]
+    category: persistence
+    required_files: []
+
+  # ── Memory & Continuity ──
+  - id: export_memory
+    handler: handle_export_memory
+    aliases: ["export memory", "save current progress"]
+    category: memory
+    required_files: []
+
+  - id: import_memory
+    handler: handle_import_memory
+    aliases: ["import memory", "restore previous session", "load memory"]
+    category: memory
+    required_files: []
+
+  - id: session_memory_export
+    handler: handle_session_memory_export
+    aliases: ["session memory export", "export session memory"]
+    category: memory
+    required_files: []
+
+  - id: session_memory_import
+    handler: handle_session_memory_import
+    aliases: ["session memory import", "import session memory"]
+    category: memory
+    required_files: []
+
+  - id: session_memory_purge
+    handler: handle_session_memory_purge
+    aliases: ["memory purge", "purge session memory"]
+    category: memory
+    required_files: []
+
+  # ── System Actions ──
+  - id: validate
+    handler: handle_validate
+    aliases: ["validate", "validate the project", "check everything"]
+    category: system
+    required_files: []
+
+  - id: git_sync
+    handler: handle_git_sync
+    aliases: ["git sync", "sync project state", "commit state"]
+    category: system
+    required_files: []
+
+  - id: rehydrate_db
+    handler: handle_rehydrate_db
+    aliases: ["rehydrate", "rebuild database"]
+    category: system
+    required_files: []
+
+  - id: migrate
+    handler: handle_migrate
+    aliases: ["migrate", "apply new templates", "upgrade templates"]
+    category: system
+    required_files: []
+
+  # ── Scope Guardrails ──
+  - id: check_scope
+    handler: handle_check_scope
+    aliases: ["scope", "what's in scope", "show project scope", "project boundaries"]
+    category: guardrails
+    required_files: ["state/project.yaml"]

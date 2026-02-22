@@ -1,0 +1,63 @@
+# Memory Policy — Controls session memory persistence per namespace.
+#
+# persist modes:
+#   full            - Store all messages, facts, summaries
+#   summary_only    - Store summaries only (discard raw messages)
+#   distilled_only  - Store facts + summaries (discard raw messages)
+#   none            - Do not persist anything
+#
+# Namespaces ending with * are wildcard patterns.
+# e.g. "worker_*" matches worker_dev, worker_reviewer, etc.
+#
+# Auto-persistence:
+#   auto_export_on_exit  - Export session memory pack on graceful shutdown
+#   auto_import_inbox    - Auto-import from .ai_runtime/import_inbox/ on startup
+
+auto_export_on_exit: true
+auto_import_inbox: true
+
+global_denylist:
+  - "(?i)authorization:\\s*bearer\\s+\\S+"
+  - "(?i)api[_-]?key\\s*[:=]\\s*\\S+"
+
+namespaces:
+  orchestrator:
+    persist: full
+    retention_days: 90
+    max_recent_messages: 200
+    distill_every_n_turns: 20
+    max_facts: 500
+    allowed_roles:
+      - user
+      - assistant
+      - system
+
+  shared:
+    persist: distilled_only
+    retention_days: 60
+    max_recent_messages: 50
+    distill_every_n_turns: 10
+    max_facts: 200
+    allowed_roles:
+      - user
+      - assistant
+      - system
+
+  worker_default:
+    persist: summary_only
+    retention_days: 30
+    max_recent_messages: 100
+    distill_every_n_turns: 15
+    max_facts: 100
+    allowed_roles:
+      - user
+      - assistant
+      - system
+
+  worker_ephemeral:
+    persist: none
+    retention_days: 0
+    max_recent_messages: 0
+    distill_every_n_turns: 0
+    max_facts: 0
+    allowed_roles: []

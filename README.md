@@ -80,8 +80,11 @@ graph LR
 |-------|----------|------------|---------|
 | Canonical state | `.ai/` | Yes | Project truth — tasks, team, decisions, status |
 | Runtime cache | `.ai_runtime/` | Never | SQLite DB, session memory, logs, memory packs |
+| Temp / cache | `.tmp/`, `.tmp_cache/` | Never | Scratch space, safe to delete anytime |
 
 > If the database and YAML disagree, the YAML is correct. The database is a derived view, rebuilt on demand.
+
+**Switching computers?** You're safe — your checkpoints and project state travel with the repo. Import a memory pack only if you want full chat history. See [Repo Hygiene](.ai/REPO_HYGIENE.md) for details.
 
 ---
 
@@ -111,7 +114,12 @@ Load `.ai/AGENTS.md` as your operating protocol, align to the current project st
 
 This is the single activation prompt. It works with Claude Code, OpenAI Codex CLI, and Cursor (partial support). These tools may auto-load protocol files, but this prompt guarantees correct behavior.
 
-After activation, the system will show the help guide automatically (or tell you to say "help"). This shows you everything you can ask it to do.
+On activation, the system runs a **compatibility gate** that verifies:
+- All advertised capabilities have matching engine handlers (PASS/FAIL)
+- Skeleton version matches the parent project's lock (detects updates)
+- If any capability is missing, the system reports it and blocks readiness
+
+After activation, the system will show the help guide automatically (or tell you to say "help"). Help only shows features that are actually implemented — never advertises unsupported commands.
 
 ### Step 3 — Talk to it
 
@@ -255,6 +263,99 @@ Checkpoint all workers, then show me what's pending.
 
 ---
 
+## Example: Real-World Team Setup
+
+This is a real team structure you can deploy with a single prompt. Copy-paste the prompt below into your AI session to set up the full team.
+
+```
+Orchestrator (Codex)
+|
++-- codex-pm-tl-1            [PM / Tech Lead]         model: default
+|   authority: write (planning + execution coordination)
+|   |
+|   +-- codex-dev-a          [Rust Core Dev]          model: gpt-5.1-codex-mini
+|   |   scope: proto/**, internal/rust_core/**
+|   |
+|   +-- codex-dev-b          [Go Surface Dev]         model: gpt-5.1-codex-mini
+|   |   scope: cmd/**, daemon wiring, gRPC client integration
+|   |
+|   +-- codex-dev-c          [Docs + Tests Dev]       model: gpt-5.1-codex-mini
+|   |   scope: docs/blueprint/**, acceptance/parity test docs/scripts
+|   |
+|   +-- codex-dev-d          [General Dev / Support]  model: gpt-5.1-codex-mini
+|   |   scope: non-overlapping implementation slices as assigned
+|   |
+|   +-- codex-tester-1       [Tester]                 model: gpt-5.1-codex-mini
+|       scope: go test / smoke / acceptance / regression verification
+|
++-- gemini-reviewer-1        [Independent Reviewer]   model: gemini-2.5-pro
+    authority: review-only (advisory, no coding)
+    reports_to: Orchestrator directly
+    scope: risk / regression / scope-drift / bloat analysis only
+```
+
+**Set up this team by pasting this prompt:**
+
+```
+Set up and start an AI team for this project with the following structure.
+Use the provider registry defaults unless a model is explicitly specified.
+Persist the team to `.ai/state/team.yaml`, then spawn the workers and
+show me worker status.
+
+Orchestrator: Codex (default model)
+
+Team Lead (PM / Tech Lead):
+* 1 worker
+* provider: Codex
+* model: default
+* authority: write (planning/execution coordination)
+
+Reports to PM/Tech Lead:
+
+1. Rust Core Dev
+   * 1 worker
+   * provider: Codex
+   * model: gpt-5.1-codex-mini
+   * scope: proto/**, internal/rust_core/**
+
+2. Go Surface Dev
+   * 1 worker
+   * provider: Codex
+   * model: gpt-5.1-codex-mini
+   * scope: cmd/**, daemon wiring, gRPC client integration
+
+3. Docs + Tests Dev
+   * 1 worker
+   * provider: Codex
+   * model: gpt-5.1-codex-mini
+   * scope: docs/blueprint/**, acceptance/parity test docs/scripts
+
+4. General Dev / Support
+   * 1 worker
+   * provider: Codex
+   * model: gpt-5.1-codex-mini
+   * scope: non-overlapping implementation slices as assigned
+
+5. Tester
+   * 1 worker
+   * provider: Codex
+   * model: gpt-5.1-codex-mini
+   * scope: go test / smoke / acceptance / regression verification
+
+Peer to PM/Tech Lead (independent, advisory only):
+* 1 worker
+* role: Codebase Review / Analysis
+* provider: Gemini
+* model: gemini-2.5-pro
+* authority: review-only (no coding)
+* reports_to: Orchestrator directly
+* scope: risk / regression / scope-drift / bloat analysis only
+```
+
+The orchestrator will parse this into `team.yaml`, write the provider/model config, spawn all workers, and display their status. No commands to memorize.
+
+---
+
 ## Command Reference
 
 > These run under the hood. This table is for power users, CI, and debugging.
@@ -266,6 +367,7 @@ Checkpoint all workers, then show me what's pending.
 | `ai run` | Start interactive orchestrator loop | Session memory only |
 | `ai status` | Print project status report | Renders STATUS.md |
 | `ai validate` | Validate YAML against schemas | Nothing (read-only) |
+| `ai validate --full` | Full capability + intent + safety harness | Writes VALIDATION_REPORT.md |
 | `ai git-sync` | Commit canonical state to git | Whitelisted `.ai/` files only |
 | `ai rehydrate-db` | Rebuild SQLite from YAML | `.ai_runtime/ai.db` only |
 | `ai migrate` | Apply new template files | Adds missing files, never overwrites |
@@ -282,6 +384,8 @@ Checkpoint all workers, then show me what's pending.
 | `ai workers-resume` | Resume stalled workers | `.ai_runtime/workers/` |
 | `ai workers-pause` | Pause + checkpoint a worker | `.ai_runtime/workers/` |
 | `ai workers-restart` | Restart a worker from scratch | `.ai_runtime/workers/` |
+| `ai checkpoint-workers` | Force checkpoint all workers | `.ai/workers/` |
+| `ai show-checkpoints` | Show latest checkpoint per worker | Nothing (read-only) |
 | `ai scope` | Show project scope boundaries | Nothing (read-only) |
 
 ---
@@ -329,6 +433,17 @@ The skeleton submodule is the system's reference for what it can do. When the AI
 - Answers about capabilities are based on what actually exists, not assumptions.
 - When you pull system updates (`git submodule update`), the AI automatically picks up new features.
 - If something isn't supported yet, the AI will tell you plainly instead of making it up.
+
+### Update safety
+
+When the skeleton submodule is updated, the system detects the change automatically:
+
+1. A **skeleton lock** (`.ai/state/skeleton_lock.yaml`) records the last verified version
+2. On startup, the compatibility gate compares the lock to the current skeleton HEAD
+3. If the skeleton changed, it re-validates all capabilities and reports any drift
+4. If a breaking change is detected, it blocks readiness and tells you exactly what to do
+
+Run `ai validate --full` at any time to verify the full contract: schema compliance, capability coverage, intent routing accuracy, handler smoke tests, and submodule safety.
 
 ---
 

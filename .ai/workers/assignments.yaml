@@ -1,0 +1,4 @@
+# Worker Assignments — Maps worker_id to active ticket IDs
+# Updated by the orchestrator on task assignment.
+
+assignments: {}

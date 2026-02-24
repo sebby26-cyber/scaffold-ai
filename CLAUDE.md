@@ -17,7 +17,7 @@ On session start, before doing anything else:
 
 1. Read `.ai/AGENTS.md` in full. Treat it as your operating instructions.
 2. Confirm protocol is active by outputting:
-   `Protocol loaded. Use /help for commands.`
+   `Protocol loaded. Mode: [plan|execution]. Use /help for commands.`
 3. If `.ai/AGENTS.md` is missing, say so and suggest running `ai init`.
 
 Do not proceed past startup without confirming protocol load.
@@ -46,3 +46,22 @@ If the generator is unavailable, say so. Do not substitute.
 - Use the repo's tool ecosystem (Bash for `ai` CLI commands, Read for state files).
 - When asked about project state, always read `.ai/state/` files rather than guessing.
 - Prefer running `ai status` or `ai help` over generating answers from memory.
+- Claude supports `/compact` natively for context compaction.
+
+## Capability Overview
+
+This scaffold supports 29+ commands across these categories. The full catalog is in `.ai/AGENTS.md`.
+
+- **Core:** status, help, init, validate, git-sync, scope, migrate, rehydrate-db
+- **Workers:** spawn-workers, workers-status, stop-workers, configure-team, workers-resume, workers-pause, workers-restart, force-sync, checkpoint-workers, show-checkpoints
+- **Memory:** export-memory, import-memory, memory-export, memory-import, memory-purge
+- **Orchestration:** mode, plan-status, plan-generate, plan-approve, tickets, tickets-validate, precheck-collisions, stage-review-inputs, batch-close
+
+Key concepts (detailed in `.ai/AGENTS.md`):
+- **Orchestration modes:** Plan Mode (produces plans) vs Execution Mode (runs tickets)
+- **Ticket contracts:** Per-worker scope boundaries in `.ai/tickets/`
+- **Collision prevention:** File ownership checks before spawning workers
+- **Approval tiers:** auto, pm, orchestrator, user
+- **Stall detection:** Behavior-based detection of stuck workers
+- **Core truths:** Machine-checkable project invariants in `.ai/core_truths.yaml`
+- **Context compaction:** Automatic checkpoint artifacts for long sessions

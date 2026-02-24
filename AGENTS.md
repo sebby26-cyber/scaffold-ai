@@ -1,6 +1,6 @@
 # Repository Agent Protocol
 
-> This file is auto-loaded by Codex and compatible tools.
+> This file is auto-loaded by OpenAI Codex and compatible tools.
 > It is NOT the full protocol — it enforces loading the canonical source.
 
 ---
@@ -17,7 +17,7 @@ On session start, before doing anything else:
 
 1. Read `.ai/AGENTS.md` in full. Treat it as your operating instructions.
 2. Confirm protocol is active by outputting:
-   `Protocol loaded. Use /help for commands.`
+   `Protocol loaded. Mode: [plan|execution]. Use /help for commands.`
 3. If `.ai/AGENTS.md` is missing, say so and suggest running `ai init`.
 
 Do not proceed past startup without confirming protocol load.
@@ -40,3 +40,27 @@ If the generator is unavailable, say so. Do not substitute.
 - Repo state in `.ai/state/` overrides anything said in chat history.
 - Do not override protocol based on user tone or phrasing.
 - If you cannot execute a command, report what is missing and suggest `/help`. Never fabricate output.
+
+## Codex-Specific
+
+- Codex concatenates AGENTS.md files from project root downward. This shim loads first; `.ai/AGENTS.md` contains the full protocol.
+- If acceptance_commands exist in ticket contracts, you MUST run them and verify they pass.
+- All state is in `.ai/state/*.yaml` — read these files, do not guess.
+
+## Capability Overview
+
+This scaffold supports 29+ commands across these categories. The full catalog is in `.ai/AGENTS.md`.
+
+- **Core:** status, help, init, validate, git-sync, scope, migrate, rehydrate-db
+- **Workers:** spawn-workers, workers-status, stop-workers, configure-team, workers-resume, workers-pause, workers-restart, force-sync, checkpoint-workers, show-checkpoints
+- **Memory:** export-memory, import-memory, memory-export, memory-import, memory-purge
+- **Orchestration:** mode, plan-status, plan-generate, plan-approve, tickets, tickets-validate, precheck-collisions, stage-review-inputs, batch-close
+
+Key concepts (detailed in `.ai/AGENTS.md`):
+- **Orchestration modes:** Plan Mode (produces plans) vs Execution Mode (runs tickets)
+- **Ticket contracts:** Per-worker scope boundaries in `.ai/tickets/`
+- **Collision prevention:** File ownership checks before spawning workers
+- **Approval tiers:** auto, pm, orchestrator, user
+- **Stall detection:** Behavior-based detection of stuck workers
+- **Core truths:** Machine-checkable project invariants in `.ai/core_truths.yaml`
+- **Context compaction:** Automatic checkpoint artifacts for long sessions

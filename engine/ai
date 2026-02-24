@@ -13,6 +13,7 @@ Usage:
     ai rehydrate-db                Rebuild SQLite DB from canonical YAML
     ai git-sync                    Commit canonical state files to git
     ai migrate                     Apply new template files (non-destructive)
+    ai migrate --update-registries  Merge new commands/intents/capabilities into project state
     ai force-sync [--git]          Force flush state + checkpoint workers
     ai spawn-workers               Generate worker prompts and spawn workers
     ai workers-status              Show worker status
@@ -62,6 +63,7 @@ Options:
   --dry-run                   Preview migration actions (use with init --migrate-submodule)
   --full                      Run full validation harness (with validate)
   --git                       Include git-sync in force-sync
+  --update-registries         Merge new commands/intents/capabilities (with migrate)
 
 Examples (submodule usage):
   python scaffold/scaffold-ai/engine/ai init
@@ -423,7 +425,10 @@ def main():
         print(result)
 
     elif command == "migrate":
-        result = ai_run.handle_migrate(project_root)
+        result = ai_run.handle_migrate(
+            project_root,
+            update_registries=bool(flags.get("update_registries")),
+        )
         print(result)
 
     elif command == "force-sync":

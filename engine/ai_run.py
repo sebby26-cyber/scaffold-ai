@@ -117,10 +117,16 @@ def handle_validate(project_root: Path, **kwargs) -> str:
 
 
 def handle_migrate(project_root: Path, **kwargs) -> str:
-    """Non-destructive template migration."""
+    """Non-destructive template migration.
+
+    With --update-registries: also merges new command/intent/capability entries
+    into existing project state files (append-only, never removes).
+    """
     skeleton_dir = ai_init.find_skeleton_dir()
     ai_dir = project_root / ".ai"
     from .submodule_paths import LEGACY_SUBMODULE_PATH, detect_submodule_layout
+
+    update_registries = kwargs.get("update_registries", False)
 
     ai_init.copy_templates(skeleton_dir, project_root)
     meta = ai_init.stamp_metadata(project_root, skeleton_dir)
@@ -130,8 +136,19 @@ def handle_migrate(project_root: Path, **kwargs) -> str:
         f"  Skeleton version: {meta.get('skeleton_version', 'unknown')}",
         "  New template files added (if any were missing).",
         "  Existing files were NOT overwritten.",
-        "  Run 'ai validate' to check schema compliance.",
     ]
+
+    if update_registries:
+        lines.append("")
+        lines.append("Registry updates (append-only):")
+        merge_log = ai_init.merge_registry_updates(skeleton_dir, project_root)
+        lines.extend(merge_log)
+    else:
+        lines.append("  Registries NOT updated. Use --update-registries to merge new commands/intents.")
+
+    lines.append("")
+    lines.append("  Run 'ai validate' to check schema compliance.")
+
     if detect_submodule_layout(project_root)["legacy_exists"]:
         lines.append(
             f"  Legacy submodule path detected at '{LEGACY_SUBMODULE_PATH}'. "

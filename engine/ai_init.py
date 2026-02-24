@@ -19,6 +19,18 @@ except ImportError:
     yaml = None
 
 from . import ai_db, ai_git, ai_state
+
+# Registry files that support append-only merging during upgrades.
+# Each entry: (filename, list_key, identity_key)
+# list_key = YAML key containing the list of entries
+# identity_key = field that uniquely identifies each entry
+_MERGEABLE_REGISTRIES = [
+    ("state/commands.yaml", "commands", "name"),
+    ("state/intents.yaml", "intents", "id"),
+    ("state/capabilities_advertised.yaml", "capabilities", "id"),
+    ("state/recovery.yaml", None, None),  # top-level keys, merge missing
+]
+
 from .submodule_paths import (
     CANONICAL_SUBMODULE_PATH,
     LEGACY_SUBMODULE_PATH,
@@ -80,6 +92,94 @@ def copy_templates(skeleton_dir: Path, project_root: Path):
         dst = project_root / name
         if src.exists() and not dst.exists():
             shutil.copy2(str(src), str(dst))
+
+
+def merge_registry_updates(skeleton_dir: Path, project_root: Path) -> list[str]:
+    """Append-only merge of new entries from template registries into project state.
+
+    For list-based registries (commands, intents, capabilities): appends entries
+    whose identity_key doesn't already exist in the project file.
+
+    For dict-based registries (recovery): adds top-level keys that are missing.
+
+    Never removes or overwrites existing entries. Returns a log of changes.
+    """
+    if yaml is None:
+        return ["PyYAML required for registry merge"]
+
+    templates_dir = skeleton_dir / "templates" / ".ai"
+    ai_dir = project_root / ".ai"
+    log: list[str] = []
+
+    for filename, list_key, id_key in _MERGEABLE_REGISTRIES:
+        src = templates_dir / filename
+        dst = ai_dir / filename
+        if not src.exists():
+            continue
+        if not dst.exists():
+            # File doesn't exist yet — copy it wholesale
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            import shutil as _shutil
+            _shutil.copy2(str(src), str(dst))
+            log.append(f"  + {filename} (new file)")
+            continue
+
+        try:
+            src_data = yaml.safe_load(src.read_text()) or {}
+            dst_data = yaml.safe_load(dst.read_text()) or {}
+        except Exception as e:
+            log.append(f"  ! {filename}: parse error ({e})")
+            continue
+
+        if list_key and id_key:
+            # List-based merge: append entries with new identity keys
+            src_items = src_data.get(list_key, [])
+            dst_items = dst_data.get(list_key, [])
+            existing_ids = {item.get(id_key) for item in dst_items if isinstance(item, dict)}
+            added = 0
+            for item in src_items:
+                if isinstance(item, dict) and item.get(id_key) not in existing_ids:
+                    dst_items.append(item)
+                    added += 1
+            if added > 0:
+                dst_data[list_key] = dst_items
+                dst.write_text(yaml.dump(dst_data, default_flow_style=False, sort_keys=False))
+                log.append(f"  + {filename}: {added} new entries added")
+            else:
+                log.append(f"  = {filename}: up to date")
+        else:
+            # Dict-based merge: add missing top-level keys
+            added = 0
+            for key, value in src_data.items():
+                if key not in dst_data:
+                    dst_data[key] = value
+                    added += 1
+            if added > 0:
+                dst.write_text(yaml.dump(dst_data, default_flow_style=False, sort_keys=False))
+                log.append(f"  + {filename}: {added} new keys added")
+            else:
+                log.append(f"  = {filename}: up to date")
+
+    # Also update bridge files (AGENTS.md, CLAUDE.md) — these are always overwritten
+    # from templates since they are shims, not user-customized content
+    root_templates = skeleton_dir / "templates"
+    for name in ("AGENTS.md", "CLAUDE.md"):
+        src = root_templates / name
+        dst = project_root / name
+        if src.exists():
+            import shutil as _shutil
+            _shutil.copy2(str(src), str(dst))
+            log.append(f"  * {name}: updated from template")
+
+    # Update .ai/AGENTS.md (the full protocol)
+    src_protocol = root_templates / ".ai" / "AGENTS.md"
+    dst_protocol = ai_dir / "AGENTS.md"
+    if src_protocol.exists():
+        import shutil as _shutil
+        _shutil.copy2(str(src_protocol), str(dst_protocol))
+        log.append(f"  * .ai/AGENTS.md: updated from template")
+
+    return log
 
 
 def stamp_metadata(project_root: Path, skeleton_dir: Path):

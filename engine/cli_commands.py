@@ -89,10 +89,10 @@ COMMAND_SPECS: tuple[CliCommandSpec, ...] = (
     ),
     CliCommandSpec(
         "migrate",
-        "migrate",
-        "Apply new template files (non-destructive)",
+        "migrate [--update-registries]",
+        "Apply new template files (--update-registries: merge new commands/intents)",
         "Apply new template files",
-        "ai migrate",
+        "ai migrate --update-registries",
         aliases=("/migrate",),
     ),
     CliCommandSpec(

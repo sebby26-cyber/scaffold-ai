@@ -14,6 +14,9 @@ WHITELISTED_PATHS = [
     ".ai/STATUS.md",
     ".ai/DECISIONS.md",
     ".ai/METADATA.yaml",
+    ".ai/tickets/",
+    ".ai/core_truths.yaml",
+    ".ai/workers/",
 ]
 
 

@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Ticket Contract",
+  "description": "Schema for worker ticket contracts in .ai/tickets/",
+  "type": "object",
+  "required": ["ticket_id", "role", "ticket_type", "objective", "allowed_files"],
+  "properties": {
+    "ticket_id": {
+      "type": "string",
+      "description": "Unique ticket identifier"
+    },
+    "role": {
+      "type": "string",
+      "description": "Worker role assigned to this ticket"
+    },
+    "ticket_type": {
+      "type": "string",
+      "enum": ["prod", "test", "docs", "review", "research", "ops"],
+      "description": "Type of work this ticket represents"
+    },
+    "objective": {
+      "type": "string",
+      "description": "Clear description of what this ticket must accomplish"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "ready", "assigned", "in_progress", "review", "done", "blocked"],
+      "default": "draft"
+    },
+    "allowed_files": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Glob patterns for files this ticket may modify"
+    },
+    "forbidden_files": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Glob patterns for files this ticket must NOT modify"
+    },
+    "max_files_changed": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum number of files this ticket may change (diff budget)"
+    },
+    "depends_on": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Ticket IDs that must complete before this one"
+    },
+    "acceptance_commands": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Shell commands that must pass for this ticket to be accepted"
+    },
+    "granularity": {
+      "type": "string",
+      "enum": ["L0", "L1", "L2", "L3", "L4"],
+      "default": "L2",
+      "description": "Planning granularity level"
+    },
+    "approval_tier": {
+      "type": "string",
+      "enum": ["auto", "pm", "orchestrator", "user"],
+      "default": "auto",
+      "description": "Required approval tier for execution"
+    },
+    "approved": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this ticket has been explicitly approved"
+    },
+    "core_truth_refs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "IDs of core truths this ticket must respect"
+    },
+    "plan_mode_code_override": {
+      "type": "boolean",
+      "default": false,
+      "description": "Allow code file patterns even in plan mode"
+    },
+    "_warnings": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Legacy compatibility warnings"
+    }
+  }
+}

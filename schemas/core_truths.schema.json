@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Core Truths Registry",
+  "description": "Invariants and hard truths that govern project behavior",
+  "type": "object",
+  "properties": {
+    "truths": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "statement", "owner", "scope"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique truth identifier"
+          },
+          "statement": {
+            "type": "string",
+            "description": "The invariant or rule statement"
+          },
+          "owner": {
+            "type": "string",
+            "description": "Who owns/defined this truth"
+          },
+          "scope": {
+            "type": "string",
+            "description": "Where this truth applies (e.g., 'all', 'execution', 'planning')"
+          },
+          "supersedes": {
+            "type": "string",
+            "description": "ID of a truth this one replaces"
+          },
+          "effective_date": {
+            "type": "string",
+            "description": "When this truth became effective"
+          },
+          "machine_checkable": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether this truth can be verified automatically"
+          },
+          "check_command": {
+            "type": "string",
+            "description": "Shell command to verify this truth (if machine_checkable)"
+          }
+        }
+      }
+    }
+  }
+}

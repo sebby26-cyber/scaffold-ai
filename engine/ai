@@ -477,6 +477,57 @@ def main():
         result = ai_run.handle_check_scope(project_root, text=flags.get("text", ""))
         print(result)
 
+    elif command == "tickets":
+        subcmd = args[1] if len(args) > 1 else ""
+        if subcmd == "validate":
+            result = ai_run.handle_tickets_validate(project_root)
+            print(result)
+        elif subcmd == "list":
+            result = ai_run.handle_tickets_list(project_root)
+            print(result)
+        else:
+            print(f"Unknown tickets subcommand: '{subcmd}'")
+            print("Available: tickets validate, tickets list")
+            sys.exit(1)
+
+    elif command == "precheck-collisions":
+        result = ai_run.handle_precheck_collisions(project_root)
+        print(result)
+
+    elif command == "stage-review-inputs":
+        result = ai_run.handle_stage_review_inputs(
+            project_root, batch_id=flags.get("batch_id"),
+        )
+        print(result)
+
+    elif command == "batch-close":
+        result = ai_run.handle_batch_close(
+            project_root, execute="execute" in flags,
+        )
+        print(result)
+
+    elif command == "mode":
+        result = ai_run.handle_set_mode(
+            project_root, mode=flags.get("mode", ""),
+        )
+        print(result)
+
+    elif command == "plan":
+        subcmd = args[1] if len(args) > 1 else ""
+        if subcmd == "status":
+            result = ai_run.handle_plan_status(project_root)
+            print(result)
+        elif subcmd == "generate":
+            result = ai_run.handle_plan_generate(project_root)
+            print(result)
+        elif subcmd == "approve":
+            result = ai_run.handle_plan_approve(project_root)
+            print(result)
+        else:
+            print(f"Unknown plan subcommand: '{subcmd}'")
+            print("Available: plan status, plan generate, plan approve")
+            sys.exit(1)
+
     elif command == "memory":
         subcmd = args[1] if len(args) > 1 else ""
         if subcmd == "export":

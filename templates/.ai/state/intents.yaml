@@ -220,3 +220,87 @@ intents:
       - "Worker checkpoints"
       - "What have workers done?"
     category: workers
+
+  # ── Ticket Management ──
+  - id: tickets_validate
+    handler: handle_tickets_validate
+    aliases: ["/tickets-validate", "tickets validate"]
+    keywords: ["validate tickets", "check tickets", "ticket contracts"]
+    examples:
+      - "Validate all ticket contracts"
+      - "Check tickets"
+    category: orchestration
+
+  - id: tickets_list
+    handler: handle_tickets_list
+    aliases: ["/tickets-list", "/tickets", "tickets list"]
+    keywords: ["list tickets", "show tickets", "all tickets"]
+    examples:
+      - "List all tickets"
+      - "Show tickets"
+    category: orchestration
+
+  - id: precheck_collisions
+    handler: handle_precheck_collisions
+    aliases: ["/precheck-collisions", "precheck-collisions"]
+    keywords: ["check collisions", "file collisions", "ownership conflicts"]
+    examples:
+      - "Check for file collisions"
+      - "Precheck collisions before spawning"
+    category: orchestration
+
+  - id: stage_review_inputs
+    handler: handle_stage_review_inputs
+    aliases: ["/stage-review-inputs", "stage-review-inputs"]
+    keywords: ["stage review", "review inputs", "review bundle"]
+    examples:
+      - "Stage worker outputs for review"
+      - "Prepare review bundle"
+    category: orchestration
+
+  - id: batch_close
+    handler: handle_batch_close
+    aliases: ["/batch-close", "batch-close"]
+    keywords: ["batch close", "close batch", "sync checklist", "post-batch"]
+    examples:
+      - "Run batch close checklist"
+      - "Close this batch"
+    category: orchestration
+
+  # ── Orchestration Modes ──
+  - id: set_mode
+    handler: handle_set_mode
+    aliases: ["/mode", "mode"]
+    keywords: ["mode", "plan mode", "execution mode", "switch mode"]
+    examples:
+      - "Switch to plan mode"
+      - "Set execution mode"
+      - "What mode are we in?"
+    category: orchestration
+
+  - id: plan_status
+    handler: handle_plan_status
+    aliases: ["/plan-status", "plan status"]
+    keywords: ["plan status", "planning status", "current plan"]
+    examples:
+      - "Show plan status"
+      - "What's the current plan?"
+    category: orchestration
+
+  - id: plan_generate
+    handler: handle_plan_generate
+    aliases: ["/plan-generate", "plan generate"]
+    keywords: ["generate plan", "create plan", "plan outputs", "task DAG"]
+    examples:
+      - "Generate plan outputs"
+      - "Show task DAG and batch plan"
+    category: orchestration
+
+  - id: plan_approve
+    handler: handle_plan_approve
+    aliases: ["/plan-approve", "plan approve"]
+    keywords: ["approve plan", "finalize plan", "execute plan"]
+    examples:
+      - "Approve the plan"
+      - "Generate execution tickets from plan"
+    category: orchestration

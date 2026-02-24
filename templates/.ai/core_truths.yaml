@@ -1,0 +1,40 @@
+# Core Truths Registry
+# Invariants and hard truths that govern project behavior.
+# Tickets should reference applicable truths via core_truth_refs.
+# Machine-checkable truths are verified during validation.
+
+truths:
+  - id: blueprint_authority
+    statement: "The blueprint is the single source of architectural truth. No implementation diverges without documented approval."
+    owner: orchestrator
+    scope: all
+    effective_date: "2026-01-01"
+    machine_checkable: false
+
+  - id: no_scope_drift
+    statement: "No work is performed outside the approved phase scope without explicit escalation."
+    owner: orchestrator
+    scope: execution
+    effective_date: "2026-01-01"
+    machine_checkable: false
+
+  - id: no_destructive_unauth
+    statement: "No destructive actions (delete, force-push, drop) without explicit user approval."
+    owner: orchestrator
+    scope: all
+    effective_date: "2026-01-01"
+    machine_checkable: false
+
+  - id: single_writer
+    statement: "Only the orchestrator writes canonical state. Workers propose; orchestrator commits."
+    owner: orchestrator
+    scope: all
+    effective_date: "2026-01-01"
+    machine_checkable: false
+
+  - id: no_provider_bypass
+    statement: "No provider-specific execution bypasses around the governor/runner/audit pipeline."
+    owner: orchestrator
+    scope: execution
+    effective_date: "2026-01-01"
+    machine_checkable: false

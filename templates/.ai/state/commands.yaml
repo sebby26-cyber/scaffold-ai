@@ -220,3 +220,78 @@ commands:
       - "what have workers done"
     handler: handle_show_checkpoints
     description: Show latest checkpoint per worker
+
+  - name: tickets-validate
+    aliases:
+      - "/tickets-validate"
+      - "validate tickets"
+      - "check ticket contracts"
+    handler: handle_tickets_validate
+    description: Validate all ticket contracts against schema and policy
+
+  - name: tickets-list
+    aliases:
+      - "/tickets"
+      - "/tickets-list"
+      - "list tickets"
+      - "show tickets"
+    handler: handle_tickets_list
+    description: List all tickets with status and metadata
+
+  - name: precheck-collisions
+    aliases:
+      - "/precheck-collisions"
+      - "check collisions"
+      - "file collision check"
+    handler: handle_precheck_collisions
+    description: Run file collision checker on active tickets
+
+  - name: stage-review-inputs
+    aliases:
+      - "/stage-review-inputs"
+      - "stage review"
+      - "prepare review bundle"
+    handler: handle_stage_review_inputs
+    description: Stage worker outputs into review bundles
+
+  - name: batch-close
+    aliases:
+      - "/batch-close"
+      - "close batch"
+      - "batch sync checklist"
+    handler: handle_batch_close
+    description: Post-batch canonical sync gate and commit checklist
+
+  - name: mode
+    aliases:
+      - "/mode"
+      - "switch mode"
+      - "set mode"
+      - "plan mode"
+      - "execution mode"
+    handler: handle_set_mode
+    description: Show or set orchestration mode (plan/execution)
+
+  - name: plan-status
+    aliases:
+      - "/plan-status"
+      - "plan status"
+      - "show plan"
+    handler: handle_plan_status
+    description: Show current planning status and artifacts
+
+  - name: plan-generate
+    aliases:
+      - "/plan-generate"
+      - "generate plan"
+      - "create plan"
+    handler: handle_plan_generate
+    description: Generate plan outputs (task DAG, batch plan, ownership matrix)
+
+  - name: plan-approve
+    aliases:
+      - "/plan-approve"
+      - "approve plan"
+      - "finalize plan"
+    handler: handle_plan_approve
+    description: Approve plan and generate execution tickets

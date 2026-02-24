@@ -16,6 +16,7 @@ FULL VALIDATION HARNESS
   OK    recovery.yaml
   OK    project.yaml
   OK    submodule_integrity
+  OK    submodule_path_policy
   OK    capabilities_consistency
   Schema validation: PASS
 
@@ -55,8 +56,8 @@ Capabilities check: PASS
 
 --- 6. Skeleton Version Lock ---
   SKELETON UPDATED since last lock!
-  Locked:  PLACEHOLDER (PLACEHOL)
-  Current: ab9fdcf (ab9fdcf9)
+  Locked:  ab9fdcf (ab9fdcf9)
+  Current: 14100c4 (14100c43)
 
   Actions required:
     1. Run 'ai validate --full' to check compatibility

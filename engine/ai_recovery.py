@@ -36,6 +36,12 @@ def load_recovery_config(project_root: Path) -> dict:
         "stall_timeout_seconds": 120,
         "max_retries": 3,
         "checkpoint_enabled": True,
+        "stall_no_diff_minutes": 10,
+        "stall_no_test_minutes": 15,
+        "auto_stop_stalled": False,
+        "compaction_interval_minutes": 15,
+        "max_context_tokens_estimate": 80000,
+        "auto_compact": True,
     }
 
 

@@ -240,6 +240,31 @@ def validate_all(
     else:
         results["capabilities_consistency"] = []
 
+    # Ticket validation (if tickets exist)
+    try:
+        from . import ai_tickets
+        tickets_dir = ai_dir / "tickets"
+        if tickets_dir.is_dir():
+            non_index = [f for f in tickets_dir.glob("*.yaml") if not f.name.startswith("_")]
+            if non_index:
+                ticket_root = ai_dir.parent  # project root
+                p, f, errs = ai_tickets.validate_all_tickets(ticket_root)
+                if errs:
+                    results["tickets"] = errs
+                else:
+                    results["tickets"] = []
+    except Exception:
+        pass
+
+    # Core truths validation (optional)
+    core_truths_path = ai_dir / "core_truths.yaml"
+    if core_truths_path.exists():
+        truths_schema = schemas_dir / "core_truths.schema.json"
+        if truths_schema.exists():
+            results["core_truths.yaml"] = validate_file(core_truths_path, truths_schema)
+        else:
+            results["core_truths.yaml"] = []
+
     return results
 
 

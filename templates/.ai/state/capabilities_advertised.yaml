@@ -159,3 +159,59 @@ capabilities:
     aliases: ["scope", "what's in scope", "show project scope", "project boundaries"]
     category: guardrails
     required_files: ["state/project.yaml"]
+
+  # ── Ticket Management ──
+  - id: tickets_validate
+    handler: handle_tickets_validate
+    aliases: ["tickets validate", "validate tickets", "check ticket contracts"]
+    category: orchestration
+    required_files: []
+
+  - id: tickets_list
+    handler: handle_tickets_list
+    aliases: ["tickets list", "list tickets", "show tickets"]
+    category: orchestration
+    required_files: []
+
+  - id: precheck_collisions
+    handler: handle_precheck_collisions
+    aliases: ["precheck collisions", "check file collisions"]
+    category: orchestration
+    required_files: []
+
+  - id: stage_review_inputs
+    handler: handle_stage_review_inputs
+    aliases: ["stage review inputs", "prepare review bundle"]
+    category: orchestration
+    required_files: []
+
+  - id: batch_close
+    handler: handle_batch_close
+    aliases: ["batch close", "close batch", "post-batch sync"]
+    category: orchestration
+    required_files: []
+
+  # ── Orchestration Modes ──
+  - id: set_mode
+    handler: handle_set_mode
+    aliases: ["mode", "set mode", "plan mode", "execution mode"]
+    category: orchestration
+    required_files: []
+
+  - id: plan_status
+    handler: handle_plan_status
+    aliases: ["plan status", "show plan", "current plan"]
+    category: orchestration
+    required_files: []
+
+  - id: plan_generate
+    handler: handle_plan_generate
+    aliases: ["plan generate", "generate plan", "task DAG"]
+    category: orchestration
+    required_files: []
+
+  - id: plan_approve
+    handler: handle_plan_approve
+    aliases: ["plan approve", "approve plan", "finalize plan"]
+    category: orchestration
+    required_files: []

@@ -9,3 +9,23 @@ max_retries: 3
 
 # Whether to auto-checkpoint workers periodically
 checkpoint_enabled: true
+
+# Behavior-based stall detection
+# Minutes of activity with no file diff before flagging as stalled
+stall_no_diff_minutes: 10
+
+# Minutes of activity with no test execution before flagging
+stall_no_test_minutes: 15
+
+# Automatically stop stalled workers (vs just flagging)
+auto_stop_stalled: false
+
+# Context compaction settings
+# Minutes between compaction checkpoints
+compaction_interval_minutes: 15
+
+# Estimated token threshold to trigger compaction
+max_context_tokens_estimate: 80000
+
+# Enable automatic compaction
+auto_compact: true

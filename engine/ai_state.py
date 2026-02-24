@@ -49,6 +49,14 @@ def compute_canonical_hash(ai_dir: Path) -> str:
         fpath = workers_dir / name
         if fpath.exists():
             h.update(fpath.read_bytes())
+    # Include ticket index
+    ticket_index = ai_dir / "tickets" / "_index.yaml"
+    if ticket_index.exists():
+        h.update(ticket_index.read_bytes())
+    # Include core truths
+    truths_path = ai_dir / "core_truths.yaml"
+    if truths_path.exists():
+        h.update(truths_path.read_bytes())
     return h.hexdigest()
 
 
@@ -218,32 +226,39 @@ def render_status(ai_dir: Path, runtime_dir: Path) -> str:
             lines.append(f"    - {t['id']}: {t['title']}")
         lines.append("")
 
-    # Worker Bees
-    capabilities = _load_capabilities(ai_dir)
-    worker_cfg = capabilities.get("worker_bees", {})
-    workers_configured = []
-    for role in team.get("roles", []):
-        for w in role.get("workers", []):
-            workers_configured.append({
-                "id": w.get("id", "?"),
-                "role": role.get("role_id", "?"),
-                "model": w.get("model", "?"),
-            })
+    # Worker Bees — infographic-style team visualization
+    try:
+        from .ai_team_viz import render_team_viz_compact
+        team_viz = render_team_viz_compact(ai_dir.parent)
+        if team_viz:
+            lines.append(team_viz)
+            lines.append("")
+    except Exception:
+        # Fallback to basic listing
+        capabilities = _load_capabilities(ai_dir)
+        worker_cfg = capabilities.get("worker_bees", {})
+        workers_configured = []
+        for role in team.get("roles", []):
+            for w in role.get("workers", []):
+                workers_configured.append({
+                    "id": w.get("id", "?"),
+                    "role": role.get("role_id", "?"),
+                    "model": w.get("model", "?"),
+                })
 
-    lines.append("  Worker Bees:")
-    if workers_configured:
-        max_workers = worker_cfg.get("max_concurrent_workers", "?")
-        lines.append(f"    Configured: {len(workers_configured)} (max concurrent: {max_workers})")
-        for w in workers_configured:
-            # Find assigned tasks
-            assigned = [t for t in tasks if t.get("owner_role") == w["role"] and t.get("status") == "in_progress"]
-            task_info = f" — working on: {assigned[0]['id']}" if assigned else " — idle"
-            lines.append(f"    - {w['id']} ({w['role']}){task_info}")
-    else:
-        lines.append("    No worker assignments configured.")
-        if worker_cfg.get("supported"):
-            lines.append('    Say "Set up worker bees for this project" to configure.')
-    lines.append("")
+        lines.append("  Worker Bees:")
+        if workers_configured:
+            max_workers = worker_cfg.get("max_concurrent_workers", "?")
+            lines.append(f"    Configured: {len(workers_configured)} (max concurrent: {max_workers})")
+            for w in workers_configured:
+                assigned = [t for t in tasks if t.get("owner_role") == w["role"] and t.get("status") == "in_progress"]
+                task_info = f" — working on: {assigned[0]['id']}" if assigned else " — idle"
+                lines.append(f"    - {w['id']} ({w['role']}){task_info}")
+        else:
+            lines.append("    No worker assignments configured.")
+            if worker_cfg.get("supported"):
+                lines.append('    Say "Set up worker bees for this project" to configure.')
+        lines.append("")
 
     # Blockers / Approvals
     if pending:

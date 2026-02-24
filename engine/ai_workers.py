@@ -289,11 +289,26 @@ def _load_prompt_template(project_root: Path) -> str:
     )
 
 
-def spawn_workers(project_root: Path) -> str:
+def spawn_workers(project_root: Path, force: bool = False) -> str:
     """Spawn worker bees: generate prompts + write registry + print CLI instructions.
 
+    Runs collision precheck before spawning unless --force is set.
     Returns formatted output with per-worker spawn instructions.
     """
+    # Collision precheck
+    if not force:
+        try:
+            from . import ai_collisions
+            has_collisions, report = ai_collisions.precheck_collisions(project_root)
+            if has_collisions:
+                return (
+                    "SPAWN ABORTED — Hard file collisions detected:\n\n"
+                    + report
+                    + "\nResolve collisions or use --force to override."
+                )
+        except Exception:
+            pass  # Don't block spawn on precheck failures
+
     workers = generate_worker_prompts(project_root)
     if not workers:
         return (
@@ -367,10 +382,11 @@ def spawn_workers(project_root: Path) -> str:
     return "\n".join(lines)
 
 
-def get_worker_status(project_root: Path) -> str:
+def get_worker_status(project_root: Path, show_stalled: bool = False) -> str:
     """Read worker registry and return formatted status.
 
     Falls back to canonical roster if runtime registry is missing.
+    If show_stalled is True, appends stall detection results.
     """
     registry_path = project_root / ".ai_runtime" / "workers" / "registry.json"
     workers = []
@@ -394,24 +410,64 @@ def get_worker_status(project_root: Path) -> str:
         else:
             return "No workers spawned yet. Say \"Spawn worker bees\" to start."
 
-    lines = [f"Worker Bees ({len(workers)}):\n"]
-    lines.append(f"  Spawned: {spawned_at}\n")
+    W = 60
+    sep = "\u2500" * W
+    lines = [f"\u250c{sep}\u2510"]
+    lines.append(_wbox(f"WORKER BEES  ({len(workers)})", W))
+    lines.append(f"\u2514{sep}\u2518")
+    lines.append(f"  Spawned: {spawned_at}")
+    lines.append("")
 
     for w in workers:
         wid = w.get("worker_id", w.get("id", "?"))
-        lines.append(f"  {wid} ({w.get('role', '?')})")
-        lines.append(f"    Provider: {w.get('provider', '?')} | Model: {w.get('model', '?')}")
-        status = w.get('status', '?')
-        lines.append(f"    Status:   {status}")
+        status = w.get("status", "?")
+        provider = w.get("provider", "?")
+        model = w.get("model", "?")
+
+        # Status badge
+        if status == "active":
+            badge = "\u25cf"  # ●
+        elif status == "ready":
+            badge = "\u25cb"  # ○
+        elif status == "stopped":
+            badge = "\u25a0"  # ■
+        else:
+            badge = "\u25a1"  # □
+
+        lines.append(f"  {badge}  {wid:<28} {w.get('role', '?')}")
+        lines.append(f"     {provider}/{model}   status: {status}")
+
         if w.get("last_heartbeat_at"):
-            lines.append(f"    Last heartbeat: {w['last_heartbeat_at']}")
+            lines.append(f"     heartbeat: {w['last_heartbeat_at']}")
         if w.get("last_checkpoint_id"):
-            lines.append(f"    Last checkpoint: {w['last_checkpoint_id']}")
+            lines.append(f"     checkpoint: {w['last_checkpoint_id']}")
         if w.get("retry_count", 0) > 0:
-            lines.append(f"    Retries: {w['retry_count']}")
+            lines.append(f"     retries: {w['retry_count']}")
         lines.append("")
 
+    # Legend
+    lines.append("  \u25cf active   \u25cb ready   \u25a0 stopped   \u25a1 other")
+
+    # Stall detection (if requested)
+    if show_stalled:
+        try:
+            from . import ai_stall_detect
+            stalled = ai_stall_detect.detect_all_stalled(project_root)
+            if stalled:
+                lines.append("")
+                lines.append(ai_stall_detect.format_stall_report(stalled))
+            else:
+                lines.append("\n  No stalled workers detected.")
+        except Exception:
+            pass
+
     return "\n".join(lines)
+
+
+def _wbox(text: str, width: int) -> str:
+    """Center text inside box borders."""
+    pad = (width - len(text)) // 2
+    return f"\u2502{' ' * pad}{text}{' ' * (width - pad - len(text))}\u2502"
 
 
 def stop_workers(project_root: Path) -> str:

@@ -31,6 +31,14 @@ One orchestrator leads. Workers execute. State is tracked in plain YAML, committ
 ### What you get
 
 - **One leader, many workers** — single orchestrator with write authority; worker bees run in parallel across departments
+- **Plan before you execute** — explicit plan mode produces DAGs, ownership matrices, and batch plans before any code changes
+- **Ticket contracts** — every worker gets a machine-enforceable ticket with allowed files, forbidden files, diff budgets, and acceptance commands
+- **Collision prevention** — file ownership matrix detects overlapping tickets before workers spawn
+- **Stall detection** — behavior-based detection catches token-burn, read loops, and silent workers
+- **Approval tiers** — auto, PM, orchestrator, and user approval levels per ticket
+- **Granularity levels** — L0 (strategic) through L4 (integration) for plans and tickets
+- **Context compaction** — provider-agnostic checkpoint protocol prevents long-context failures
+- **Core truths** — machine-checkable invariants that tickets must reference and respect
 - **Project state in plain files** — YAML and Markdown, committed to git, diffable
 - **Automatic persistence** — every turn saved, memory exported on exit, imported on startup
 - **Portable context** — memory packs let you resume on any machine
@@ -54,11 +62,31 @@ One orchestrator leads. Workers execute. State is tracked in plain YAML, committ
 ## How It Works
 
 ```mermaid
-graph LR
+graph TD
     H["Human"] -->|plain language| O["Orchestrator"]
-    O -->|scoped tickets| W["Workers"]
-    W -->|proposals| O
-    O -->|writes| Y[".ai/state/*.yaml"]
+
+    subgraph "Plan Mode"
+        O -->|draft plan| PM["Plan<br/>DAG + ownership matrix"]
+        PM -->|reviewer critique| RV["Reviewers"]
+        RV -->|feedback| PM
+        PM -->|approve| TK["Ticket Contracts<br/>.ai/tickets/*.yaml"]
+    end
+
+    subgraph "Execution Mode"
+        TK -->|collision check| CC["Collision<br/>Checker"]
+        CC -->|spawn| W["Workers<br/>(50-80+)"]
+        W -->|heartbeats| SD["Stall<br/>Detector"]
+        W -->|compaction| CP["Checkpoint<br/>Protocol"]
+        W -->|proposals| RS["Review<br/>Staging"]
+        RS -->|classify| O
+    end
+
+    subgraph "Batch Close"
+        O -->|batch-close| BC["Sync Gate<br/>Checklist"]
+        BC -->|acceptance tests| AT["Acceptance<br/>Commands"]
+        BC -->|update| Y[".ai/state/*.yaml"]
+    end
+
     Y -->|reconcile| DB[".ai_runtime/ai.db"]
     O -->|auto-saves| SM["Session Memory"]
     SM -->|export| MP["Memory Packs"]
@@ -67,6 +95,15 @@ graph LR
     style H fill:#e8f5e9,stroke:#388e3c
     style O fill:#e3f2fd,stroke:#1976d2
     style W fill:#fff3e0,stroke:#f57c00
+    style TK fill:#e8eaf6,stroke:#3f51b5
+    style PM fill:#e8eaf6,stroke:#3f51b5
+    style RV fill:#e8eaf6,stroke:#3f51b5
+    style CC fill:#fff8e1,stroke:#f9a825
+    style SD fill:#fff8e1,stroke:#f9a825
+    style CP fill:#fff8e1,stroke:#f9a825
+    style RS fill:#fff8e1,stroke:#f9a825
+    style BC fill:#fce4ec,stroke:#c62828
+    style AT fill:#fce4ec,stroke:#c62828
     style Y fill:#fce4ec,stroke:#c62828
     style DB fill:#f5f5f5,stroke:#757575
     style SM fill:#f3e5f5,stroke:#7b1fa2
@@ -74,12 +111,13 @@ graph LR
     style G fill:#fce4ec,stroke:#c62828
 ```
 
-**Two storage layers, clear separation:**
+**Three storage layers, clear separation:**
 
 | Layer | Location | Committed? | Purpose |
 |-------|----------|------------|---------|
-| Canonical state | `.ai/` | Yes | Project truth — tasks, team, decisions, status |
-| Runtime cache | `.ai_runtime/` | Never | SQLite DB, session memory, logs, memory packs |
+| Canonical state | `.ai/` | Yes | Project truth — tasks, team, decisions, tickets, core truths |
+| Ticket contracts | `.ai/tickets/` | Yes | Per-worker scoped contracts with allowed files, approval tiers |
+| Runtime cache | `.ai_runtime/` | Never | SQLite DB, session memory, logs, review staging, memory packs |
 | Temp / cache | `.tmp/`, `.tmp_cache/` | Never | Scratch space, safe to delete anytime |
 
 > If the database and YAML disagree, the YAML is correct. The database is a derived view, rebuilt on demand.
@@ -269,6 +307,19 @@ You interact using natural language. No commands to memorize. The orchestrator t
 | "Resume stalled workers" | Recovers workers that hit token limits or went silent |
 | "Stop all workers" | Marks workers as stopped |
 
+**Orchestration and planning:**
+
+| You say | What happens |
+|---------|-------------|
+| "Switch to plan mode" | Sets mode to planning (no code changes) |
+| "Show plan status" | Displays current plan, DAG, and reviewer feedback |
+| "Generate plan outputs" | Creates task DAG, batch plan, file ownership matrix |
+| "Approve the plan" | Approves plan and generates execution tickets |
+| "Validate tickets" | Validates all ticket contracts against schema and policy |
+| "Check for file collisions" | Detects overlapping allowed_files across active tickets |
+| "Stage review inputs" | Bundles worker outputs for reviewer evaluation |
+| "Close this batch" | Runs post-batch sync checklist (dry-run by default) |
+
 **State and scope:**
 
 | You say | What happens |
@@ -285,6 +336,105 @@ Worker progress is saved automatically via checkpoints and summaries in `.ai/wor
 ```
 Checkpoint all workers, then show me what's pending.
 ```
+
+---
+
+## Orchestration Modes
+
+The system operates in two explicit modes with different rules and constraints.
+
+### Plan Mode (default)
+
+Plan mode produces plans, not code changes. Use it to:
+- Design task DAGs and parallel batch plans
+- Generate file ownership matrices to prevent collisions
+- Assign workers to tickets with clear scopes
+- Define acceptance gates and rollback plans
+- Run planning teams (PM lead, scope assistants, reviewers, researchers)
+
+In plan mode, only `review`, `research`, and `docs` tickets may be assigned to workers. Code file patterns are blocked unless explicitly overridden.
+
+**Planning workflow:**
+1. Draft a plan with ticket stubs
+2. Run reviewers to critique the plan
+3. Resolve file collisions
+4. Approve the plan
+5. Generate execution tickets (auto-switches to execution mode)
+
+### Execution Mode
+
+Execution mode runs approved tickets and integrates results. It enforces:
+- **Allowed/forbidden files** — workers cannot touch files outside their ticket contract
+- **Diff budgets** — `max_files_changed` limits per ticket
+- **Acceptance commands** — shell commands that must pass for a ticket to close
+- **Approval tiers** — `auto`, `pm`, `orchestrator`, or `user` approval required
+- **Stall detection** — catches no-diff, log-churn, silent, and repeated-failure patterns
+- **Post-batch sync** — canonical state must be reconciled before committing
+
+### Ticket Contracts
+
+Every worker gets a ticket in `.ai/tickets/<ticket_id>.yaml`:
+
+```yaml
+ticket_id: impl-auth-01
+role: developer
+ticket_type: prod
+objective: "Implement JWT authentication middleware"
+status: ready
+allowed_files: ["src/auth/**", "tests/auth/**"]
+forbidden_files: ["src/config/secrets.*"]
+max_files_changed: 10
+granularity: L2
+approval_tier: pm
+approved: true
+core_truth_refs: [single_writer, no_scope_drift]
+acceptance_commands:
+  - "python -m pytest tests/auth/ -q"
+depends_on: [setup-db-01]
+```
+
+### Granularity Levels
+
+| Level | Name | Scope |
+|-------|------|-------|
+| L0 | Strategic | Milestones and phases |
+| L1 | Batch | Parallel wave plan |
+| L2 | Worker Ticket | Single deliverable |
+| L3 | Micro-task | Small patch or test |
+| L4 | Integration | Merge/test/commit checklist |
+
+### Approval Tiers
+
+| Tier | Auto-runs? | Examples |
+|------|-----------|----------|
+| `auto` | Yes | Read-only research, docs formatting, bounded tests |
+| `pm` | No — PM approval | Production code, dependency changes |
+| `orchestrator` | No — orchestrator approval | Architecture, cross-cutting changes |
+| `user` | No — human approval | Core truth changes, destructive ops, scope expansion |
+
+### Core Truths
+
+The core truths registry (`.ai/core_truths.yaml`) defines invariants that all tickets must respect:
+
+```yaml
+truths:
+  - id: single_writer
+    statement: "Only the orchestrator writes canonical state."
+    owner: orchestrator
+    scope: all
+```
+
+Prod and ops tickets must reference applicable core truths. Validation flags missing references.
+
+### Context Compaction
+
+For long-running workers, the compaction protocol prevents silent failures:
+
+- **Time-based triggers** — checkpoint after N minutes (default: 15)
+- **Token-based triggers** — checkpoint when estimated context exceeds threshold
+- **Stall-risk triggers** — checkpoint when stall patterns detected
+- **Provider adapters** — maps to native commands (e.g., Claude `/compact`) when available
+- **Fallback** — generates a structured handoff summary with resume command
 
 ---
 
@@ -517,6 +667,18 @@ The same infographic style scales to production-grade teams. This example shows 
 | `ai checkpoint-workers` | Force checkpoint all workers | `.ai/workers/` |
 | `ai show-checkpoints` | Show latest checkpoint per worker | Nothing (read-only) |
 | `ai scope` | Show project scope boundaries | Nothing (read-only) |
+| `ai tickets validate` | Validate all ticket contracts | Nothing (read-only) |
+| `ai tickets list` | List tickets with status and metadata | Nothing (read-only) |
+| `ai precheck-collisions` | Check file collisions across tickets | Nothing (read-only) |
+| `ai stage-review-inputs` | Stage worker outputs for review | `.ai_runtime/review_staging/` |
+| `ai batch-close` | Post-batch sync gate (dry-run) | Nothing (dry-run) |
+| `ai batch-close --execute` | Post-batch sync gate (apply) | `.ai/state/`, `.ai/STATUS.md` |
+| `ai mode` | Show current orchestration mode | Nothing (read-only) |
+| `ai mode --mode plan` | Switch to plan mode | `.ai/state/mode.yaml` |
+| `ai mode --mode execution` | Switch to execution mode | `.ai/state/mode.yaml` |
+| `ai plan status` | Show current plan status | Nothing (read-only) |
+| `ai plan generate` | Generate plan outputs (DAG, matrix) | Nothing (read-only) |
+| `ai plan approve` | Approve plan and generate tickets | `.ai/tickets/`, `.ai/state/` |
 
 ---
 
@@ -601,6 +763,8 @@ For the CLI: `ai help` (terminal) or `ai help --json` (for Kanban UI integration
 | [Smoke Test: Auto-Persistence](docs/SMOKE_TEST_AUTOPERSIST.md) | Manual verification steps |
 | [Engine README](engine/README.md) | Engine internals, module map |
 | [Operator Protocol](templates/.ai/AGENTS.md) | Agent behavior rules, command routing, startup checklist |
+| [Worktree Design](templates/.ai/core/WORKTREE_DESIGN.md) | Per-worker git worktree isolation (phase 2 roadmap) |
+| [Core Truths](templates/.ai/core_truths.yaml) | Project invariants and hard truths registry |
 
 ### AGENTS.md / Operator Protocol
 

@@ -8,10 +8,12 @@ All rendering derives from the help model (which is JSON-serializable).
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from .model import HelpGuide
 
 
-def render_help_terminal(guide: HelpGuide) -> str:
+def render_help_terminal(guide: HelpGuide, project_root: Path | None = None) -> str:
     """Render a HelpGuide as terminal-friendly text."""
     W = 72
     lines: list[str] = []
@@ -34,6 +36,18 @@ def render_help_terminal(guide: HelpGuide) -> str:
     lines.append(f"  Session memory:       {'Active' if s.memory_runtime_present else 'Not yet started'}")
     lines.append(f"  Memory pack:          {'Available' if s.memory_pack_available else 'None'}")
     lines.append("")
+
+    # ── Team Visualization ──
+    if s.assignments_configured and project_root:
+        try:
+            from ..ai_team_viz import render_team_viz
+            team_viz = render_team_viz(project_root)
+            if team_viz:
+                lines.append(_section("Team Structure"))
+                lines.append(team_viz)
+                lines.append("")
+        except Exception:
+            pass
 
     # ── Quick Start ──
     lines.append(_section("Quick Start"))

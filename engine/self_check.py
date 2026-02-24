@@ -891,6 +891,392 @@ def test_force_sync():
         shutil.rmtree(str(tmpdir))
 
 
+# ─── Test 26: Ticket schema validation ───
+
+def test_ticket_schema_validation():
+    from engine.ai_tickets import validate_ticket, validate_ticket_policy
+
+    # Valid ticket
+    valid = {
+        "ticket_id": "t-1",
+        "role": "developer",
+        "ticket_type": "prod",
+        "objective": "Implement feature X",
+        "allowed_files": ["src/**"],
+        "status": "ready",
+        "granularity": "L2",
+        "approval_tier": "auto",
+    }
+    errs = validate_ticket(valid)
+    assert len(errs) == 0, f"Valid ticket had errors: {errs}"
+
+    # Missing required field
+    invalid = {"ticket_id": "t-2", "role": "dev"}
+    errs = validate_ticket(invalid)
+    assert len(errs) > 0, "Missing fields should produce errors"
+
+    # Invalid ticket_type
+    bad_type = dict(valid, ticket_id="t-3", ticket_type="invalid")
+    errs = validate_ticket(bad_type)
+    assert any("ticket_type" in e for e in errs), "Bad ticket_type should error"
+
+    # Review ticket with code patterns
+    review_ticket = {
+        "ticket_id": "t-4",
+        "role": "reviewer",
+        "ticket_type": "review",
+        "objective": "Review code",
+        "allowed_files": ["*.py"],
+    }
+    errs = validate_ticket_policy(review_ticket)
+    assert len(errs) > 0, "Review ticket with code patterns should fail policy"
+
+    # Invalid granularity
+    bad_gran = dict(valid, ticket_id="t-5", granularity="L9")
+    errs = validate_ticket(bad_gran)
+    assert any("granularity" in e for e in errs), "Bad granularity should error"
+
+
+# ─── Test 27: Collision checker ───
+
+def test_collision_checker():
+    from engine.ai_collisions import detect_collisions, build_ownership_matrix
+
+    # Overlapping tickets
+    tickets = [
+        {"ticket_id": "a", "ticket_type": "prod", "allowed_files": ["src/**"]},
+        {"ticket_id": "b", "ticket_type": "prod", "allowed_files": ["src/utils/**"]},
+    ]
+    collisions = detect_collisions(tickets, Path("/tmp"))
+    assert len(collisions) > 0, "Overlapping patterns should be detected"
+    assert collisions[0]["severity"] == "hard"
+
+    # Disjoint tickets
+    disjoint = [
+        {"ticket_id": "c", "ticket_type": "prod", "allowed_files": ["frontend/**"]},
+        {"ticket_id": "d", "ticket_type": "prod", "allowed_files": ["backend/**"]},
+    ]
+    collisions = detect_collisions(disjoint, Path("/tmp"))
+    assert len(collisions) == 0, "Disjoint patterns should not collide"
+
+    # Ownership matrix
+    matrix = build_ownership_matrix(tickets)
+    assert "src/**" in matrix
+    assert "a" in matrix["src/**"]
+
+
+# ─── Test 28: Forbidden change detection ───
+
+def test_forbidden_change_detection():
+    from engine.ai_tickets import check_post_run_violations, save_ticket
+
+    tmpdir = make_test_project()
+    try:
+        # Create tickets dir
+        tickets_dir = tmpdir / ".ai" / "tickets"
+        tickets_dir.mkdir(parents=True)
+
+        # Review ticket
+        review = {
+            "ticket_id": "review-1",
+            "role": "reviewer",
+            "ticket_type": "review",
+            "objective": "Review code",
+            "allowed_files": ["docs/**", "*.md"],
+            "forbidden_files": ["*.py"],
+        }
+        save_ticket(tmpdir, review)
+
+        # Worker modifies code -> should fail
+        violations = check_post_run_violations(tmpdir, "review-1", ["main.py"])
+        assert len(violations) > 0, "Modifying code file should violate review ticket"
+
+        # Worker modifies docs -> should pass
+        violations = check_post_run_violations(tmpdir, "review-1", ["docs/README.md"])
+        assert len(violations) == 0, "Modifying docs should be allowed"
+
+        # Test ticket modifies prod
+        test_ticket = {
+            "ticket_id": "test-1",
+            "role": "tester",
+            "ticket_type": "test",
+            "objective": "Write tests",
+            "allowed_files": ["tests/**"],
+        }
+        save_ticket(tmpdir, test_ticket)
+
+        violations = check_post_run_violations(tmpdir, "test-1", ["src/main.py"])
+        assert len(violations) > 0, "Test ticket touching prod should violate"
+    finally:
+        shutil.rmtree(str(tmpdir))
+
+
+# ─── Test 29: Stall detection ───
+
+def test_stall_detection():
+    from engine.ai_stall_detect import check_worker_stall, detect_all_stalled
+
+    tmpdir = make_test_project()
+    try:
+        # Create a worker registry with a stale heartbeat
+        workers_dir = tmpdir / ".ai_runtime" / "workers"
+        workers_dir.mkdir(parents=True)
+
+        from datetime import datetime, timezone, timedelta
+        old_time = (datetime.now(timezone.utc) - timedelta(minutes=30)).isoformat()
+
+        registry = {
+            "spawned_at": old_time,
+            "workers": [
+                {
+                    "worker_id": "dev-1",
+                    "role": "developer",
+                    "status": "running",
+                    "last_heartbeat_at": old_time,
+                },
+                {
+                    "worker_id": "dev-2",
+                    "role": "developer",
+                    "status": "stopped",
+                    "last_heartbeat_at": old_time,
+                },
+            ],
+        }
+        (workers_dir / "registry.json").write_text(json.dumps(registry))
+
+        # Create recovery config
+        state_dir = tmpdir / ".ai" / "state"
+        state_dir.mkdir(parents=True, exist_ok=True)
+        import yaml
+        (state_dir / "recovery.yaml").write_text(yaml.dump({
+            "stall_timeout_seconds": 120,
+            "stall_no_diff_minutes": 5,
+        }))
+
+        # Check stall - dev-1 should be stalled (30 min old heartbeat, no diffs)
+        stall = check_worker_stall(tmpdir, "dev-1")
+        assert stall is not None, "Worker with stale heartbeat should be stalled"
+        assert stall["stall_type"] in ("no_diff", "silent"), f"Unexpected type: {stall['stall_type']}"
+
+        # dev-2 is stopped, should not be stalled
+        stall2 = check_worker_stall(tmpdir, "dev-2")
+        assert stall2 is None, "Stopped worker should not be stalled"
+
+        # detect_all should find dev-1
+        all_stalled = detect_all_stalled(tmpdir)
+        stalled_ids = [s["worker_id"] for s in all_stalled]
+        assert "dev-1" in stalled_ids, "dev-1 should be in all stalled"
+        assert "dev-2" not in stalled_ids, "dev-2 should not be stalled"
+    finally:
+        shutil.rmtree(str(tmpdir))
+
+
+# ─── Test 30: Reviewer staging ───
+
+def test_reviewer_staging():
+    from engine.ai_review import classify_reviewer_output, is_safe_to_commit
+
+    # Actionable
+    assert classify_reviewer_output("BUG: null pointer in main.py") == "actionable"
+    assert classify_reviewer_output("Must fix the race condition") == "actionable"
+
+    # Advisory
+    assert classify_reviewer_output("Consider using a different approach") == "advisory"
+    assert classify_reviewer_output("nit: rename variable") == "advisory"
+
+    # Speculative
+    assert classify_reviewer_output("What if we rewrote the whole module?") == "speculative"
+    assert classify_reviewer_output("Maybe we should reconsider") == "speculative"
+
+    # Safety
+    assert is_safe_to_commit("actionable") is True
+    assert is_safe_to_commit("advisory") is True
+    assert is_safe_to_commit("speculative") is False
+
+
+# ─── Test 31: Batch-close sync ───
+
+def test_batch_close_sync():
+    from engine.ai_batch import detect_unsynced_files, batch_close
+    from engine.ai_init import copy_templates, setup_runtime
+
+    tmpdir = make_test_project()
+    skel = Path(skeleton_dir)
+    try:
+        copy_templates(skel, tmpdir)
+        setup_runtime(tmpdir)
+
+        # Run dry-run batch close
+        result = batch_close(tmpdir, dry_run=True)
+        assert "DRY RUN" in result, "Dry run should be indicated"
+        assert "PASS" in result or "FAIL" in result, "Checklist should have pass/fail"
+
+        # Detect unsynced should work
+        unsynced = detect_unsynced_files(tmpdir)
+        # Fresh project may or may not have unsynced files, just verify it runs
+        assert isinstance(unsynced, list), "Should return a list"
+    finally:
+        shutil.rmtree(str(tmpdir))
+
+
+# ─── Test 32: Plan mode constraints ───
+
+def test_plan_mode_constraints():
+    from engine.ai_modes import validate_mode_constraints, set_mode, get_current_mode
+
+    tmpdir = make_test_project()
+    try:
+        state_dir = tmpdir / ".ai" / "state"
+        state_dir.mkdir(parents=True, exist_ok=True)
+
+        # Set plan mode
+        set_mode(tmpdir, "plan")
+        assert get_current_mode(tmpdir) == "plan"
+
+        # Prod ticket should fail in plan mode
+        prod_ticket = {
+            "ticket_id": "t-1",
+            "ticket_type": "prod",
+            "allowed_files": ["src/**"],
+        }
+        errs = validate_mode_constraints(tmpdir, prod_ticket)
+        assert len(errs) > 0, "Prod ticket should fail in plan mode"
+
+        # Review ticket should pass in plan mode
+        review_ticket = {
+            "ticket_id": "t-2",
+            "ticket_type": "review",
+            "allowed_files": ["docs/**"],
+        }
+        errs = validate_mode_constraints(tmpdir, review_ticket)
+        assert len(errs) == 0, f"Review ticket should pass in plan mode: {errs}"
+
+        # Set execution mode
+        set_mode(tmpdir, "execution")
+        assert get_current_mode(tmpdir) == "execution"
+    finally:
+        shutil.rmtree(str(tmpdir))
+
+
+# ─── Test 33: Compaction protocol ───
+
+def test_compaction_protocol():
+    from engine.ai_compaction import (
+        generate_checkpoint_artifact,
+        validate_checkpoint_artifact,
+        generate_handoff_summary,
+    )
+
+    tmpdir = make_test_project()
+    try:
+        artifact = generate_checkpoint_artifact(
+            tmpdir,
+            worker_id="dev-1",
+            objective="Implement feature X",
+            completed_steps=["Step 1", "Step 2"],
+            pending_steps=["Step 3"],
+            changed_files=["src/main.py"],
+        )
+
+        # Validate
+        errs = validate_checkpoint_artifact(artifact)
+        assert len(errs) == 0, f"Valid artifact had errors: {errs}"
+        assert artifact["worker_id"] == "dev-1"
+        assert artifact["current_objective"] == "Implement feature X"
+        assert len(artifact["completed_steps"]) == 2
+
+        # Handoff summary
+        summary = generate_handoff_summary(artifact)
+        assert "CONTEXT COMPACTION" in summary
+        assert "Step 1" in summary
+        assert "Step 3" in summary
+
+        # Invalid artifact
+        bad = {"worker_id": "x"}  # missing schema_version, timestamp
+        errs = validate_checkpoint_artifact(bad)
+        assert len(errs) > 0, "Invalid artifact should have errors"
+    finally:
+        shutil.rmtree(str(tmpdir))
+
+
+# ─── Test 34: Granularity levels parsed ───
+
+def test_granularity_levels():
+    from engine.ai_tickets import validate_ticket, GRANULARITY_LEVELS
+
+    # Valid granularities
+    for level in GRANULARITY_LEVELS:
+        ticket = {
+            "ticket_id": f"t-{level}",
+            "role": "dev",
+            "ticket_type": "prod",
+            "objective": "Test",
+            "allowed_files": ["**"],
+            "granularity": level,
+        }
+        errs = validate_ticket(ticket)
+        gran_errs = [e for e in errs if "granularity" in e]
+        assert len(gran_errs) == 0, f"Granularity {level} should be valid"
+
+
+# ─── Test 35: Approval tier gating ───
+
+def test_approval_tier_gating():
+    from engine.ai_tickets import is_ticket_approved, APPROVAL_TIERS
+
+    # Auto-approved
+    auto = {"approval_tier": "auto"}
+    assert is_ticket_approved(auto) is True
+
+    # PM-required, not approved
+    pm = {"approval_tier": "pm", "approved": False}
+    assert is_ticket_approved(pm) is False
+
+    # PM-required, approved
+    pm_ok = {"approval_tier": "pm", "approved": True}
+    assert is_ticket_approved(pm_ok) is True
+
+    # User-required, not approved
+    user = {"approval_tier": "user"}
+    assert is_ticket_approved(user) is False
+
+
+# ─── Test 36: Core truth reference validation ───
+
+def test_core_truth_references():
+    from engine.ai_tickets import check_core_truth_references
+
+    tmpdir = make_test_project()
+    try:
+        # Create core truths
+        ai_dir = tmpdir / ".ai"
+        ai_dir.mkdir(parents=True, exist_ok=True)
+        import yaml
+        truths = {
+            "truths": [
+                {"id": "truth-1", "statement": "Test truth", "owner": "orchestrator", "scope": "all"},
+            ]
+        }
+        (ai_dir / "core_truths.yaml").write_text(yaml.dump(truths))
+
+        # Prod ticket without truth refs should warn
+        prod = {"ticket_id": "t-1", "ticket_type": "prod"}
+        errs = check_core_truth_references(tmpdir, prod)
+        assert len(errs) > 0, "Prod ticket without truth refs should warn"
+
+        # Prod ticket with valid ref
+        prod_ok = {"ticket_id": "t-2", "ticket_type": "prod", "core_truth_refs": ["truth-1"]}
+        errs = check_core_truth_references(tmpdir, prod_ok)
+        assert len(errs) == 0, f"Valid truth ref should pass: {errs}"
+
+        # Invalid truth ref
+        prod_bad = {"ticket_id": "t-3", "ticket_type": "prod", "core_truth_refs": ["nonexistent"]}
+        errs = check_core_truth_references(tmpdir, prod_bad)
+        assert any("Unknown core truth" in e for e in errs), "Bad truth ref should error"
+    finally:
+        shutil.rmtree(str(tmpdir))
+
+
 # ─── Run all ───
 
 def main():
@@ -930,6 +1316,17 @@ def main():
     check("Skeleton lock write/read", test_skeleton_lock)
     check("Handler coverage", test_handler_coverage)
     check("Force sync (save everything)", test_force_sync)
+    check("Ticket schema validation", test_ticket_schema_validation)
+    check("Collision checker", test_collision_checker)
+    check("Forbidden change detection", test_forbidden_change_detection)
+    check("Stall detection", test_stall_detection)
+    check("Reviewer staging", test_reviewer_staging)
+    check("Batch-close sync", test_batch_close_sync)
+    check("Plan mode constraints", test_plan_mode_constraints)
+    check("Compaction protocol", test_compaction_protocol)
+    check("Granularity levels", test_granularity_levels)
+    check("Approval tier gating", test_approval_tier_gating)
+    check("Core truth references", test_core_truth_references)
 
     print(f"\n{'=' * 40}")
     print(f"  Results: {passed} passed, {failed} failed")

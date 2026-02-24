@@ -233,13 +233,15 @@ def handle_git_sync(project_root: Path, message: str | None = None, **kwargs) ->
 def handle_spawn_workers(project_root: Path, **kwargs) -> str:
     """Spawn worker bees from current team config."""
     from . import ai_workers
-    return ai_workers.spawn_workers(project_root)
+    force = bool(kwargs.get("force", False))
+    return ai_workers.spawn_workers(project_root, force=force)
 
 
 def handle_workers_status(project_root: Path, **kwargs) -> str:
     """Show current worker bee status."""
     from . import ai_workers
-    return ai_workers.get_worker_status(project_root)
+    show_stalled = bool(kwargs.get("stalled", False))
+    return ai_workers.get_worker_status(project_root, show_stalled=show_stalled)
 
 
 def handle_stop_workers(project_root: Path, **kwargs) -> str:
@@ -377,6 +379,107 @@ def handle_show_checkpoints(project_root: Path, **kwargs) -> str:
     return "\n".join(lines)
 
 
+# ── Ticket Handlers ──
+
+
+def handle_tickets_validate(project_root: Path, **kwargs) -> str:
+    """Validate all ticket contracts."""
+    from . import ai_tickets
+
+    p, f, errors = ai_tickets.validate_all_tickets(project_root)
+    ai_tickets.update_ticket_index(project_root)
+
+    if not errors and p == 0 and f == 0:
+        return "No tickets found in .ai/tickets/. Create tickets to validate."
+
+    lines = [f"Ticket Validation: {p} passed, {f} failed"]
+    for err in errors:
+        lines.append(f"  {err}")
+
+    if f == 0:
+        lines.append("All ticket contracts valid.")
+    return "\n".join(lines)
+
+
+def handle_tickets_list(project_root: Path, **kwargs) -> str:
+    """List tickets with status."""
+    from . import ai_tickets
+
+    tickets = ai_tickets.load_all_tickets(project_root)
+    if not tickets:
+        return "No tickets found in .ai/tickets/."
+
+    lines = [f"Tickets ({len(tickets)}):\n"]
+    for t in tickets:
+        tid = t.get("ticket_id", "?")
+        status = t.get("status", "draft")
+        ttype = t.get("ticket_type", "?")
+        gran = t.get("granularity", "L2")
+        tier = t.get("approval_tier", "auto")
+        obj = t.get("objective", "")[:50]
+        lines.append(f"  {tid:<20} [{status}] {ttype}/{gran} tier:{tier}")
+        if obj:
+            lines.append(f"    {obj}")
+    return "\n".join(lines)
+
+
+def handle_precheck_collisions(project_root: Path, **kwargs) -> str:
+    """Run collision checker on active tickets."""
+    from . import ai_collisions
+    has_collisions, report = ai_collisions.precheck_collisions(project_root)
+    return report
+
+
+def handle_stage_review_inputs(project_root: Path, **kwargs) -> str:
+    """Stage worker outputs for review."""
+    from . import ai_review
+    batch_id = kwargs.get("batch_id")
+    return ai_review.stage_review_inputs(project_root, batch_id=batch_id)
+
+
+def handle_batch_close(project_root: Path, **kwargs) -> str:
+    """Post-batch canonical sync gate."""
+    from . import ai_batch
+    dry_run = not bool(kwargs.get("execute", False))
+    return ai_batch.batch_close(project_root, dry_run=dry_run)
+
+
+# ── Mode Handlers ──
+
+
+def handle_set_mode(project_root: Path, **kwargs) -> str:
+    """Set orchestration mode (plan/execution)."""
+    from . import ai_modes
+    mode = kwargs.get("mode", "")
+    if not mode:
+        current = ai_modes.get_current_mode(project_root)
+        return f"Current mode: {current.upper()}\nUse --mode plan or --mode execution to switch."
+    return ai_modes.set_mode(project_root, mode)
+
+
+def handle_plan_status(project_root: Path, **kwargs) -> str:
+    """Show current plan status."""
+    from . import ai_planning
+    return ai_planning.format_plan_status(project_root)
+
+
+def handle_plan_generate(project_root: Path, **kwargs) -> str:
+    """Generate plan mode outputs (DAG, batch plan, ownership matrix)."""
+    from . import ai_modes
+    plan = ai_modes.generate_plan_outputs(project_root)
+    return ai_modes.format_plan_output(plan)
+
+
+def handle_plan_approve(project_root: Path, **kwargs) -> str:
+    """Approve current plan and generate execution tickets."""
+    from . import ai_planning
+    approve_result = ai_planning.approve_plan(project_root)
+    if "Cannot approve" in approve_result:
+        return approve_result
+    gen_result = ai_planning.generate_execution_tickets(project_root)
+    return f"{approve_result}\n\n{gen_result}"
+
+
 # ── Command Registry ──
 
 
@@ -419,6 +522,15 @@ HANDLERS = {
     "handle_check_scope": handle_check_scope,
     "handle_checkpoint_workers": handle_checkpoint_workers,
     "handle_show_checkpoints": handle_show_checkpoints,
+    "handle_tickets_validate": handle_tickets_validate,
+    "handle_tickets_list": handle_tickets_list,
+    "handle_precheck_collisions": handle_precheck_collisions,
+    "handle_stage_review_inputs": handle_stage_review_inputs,
+    "handle_batch_close": handle_batch_close,
+    "handle_set_mode": handle_set_mode,
+    "handle_plan_status": handle_plan_status,
+    "handle_plan_generate": handle_plan_generate,
+    "handle_plan_approve": handle_plan_approve,
 }
 
 

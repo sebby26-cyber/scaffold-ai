@@ -438,116 +438,32 @@ For long-running workers, the compaction protocol prevents silent failures:
 
 ---
 
-## Example: Real-World Team Setup
+## Example: Real-World Usage
 
-This is a real team structure you can deploy with a single prompt. The diagram below shows how roles, providers, and authority flow together.
+### The prompt that started it all
 
-```
-╔══════════════════════════════════════════════════════════════╗
-║                     ORCHESTRATOR                             ║
-║                     Codex (default)                          ║
-╚═══════════════════════╦══════════════════════════════════════╝
-                        ║
-        ┌───────────────╨───────────────┐
-        │                               │
-  ┌─────┴──────────────────┐    ┌───────┴──────────────────┐
-  │  PM / TECH LEAD        │    │  INDEPENDENT REVIEWER    │
-  │  codex-pm-tl-1         │    │  gemini-reviewer-1       │
-  │                        │    │                          │
-  │  provider  Codex       │    │  provider  Gemini        │
-  │  model     default     │    │  model     gemini-2.5-pro│
-  │  authority WRITE       │    │  authority REVIEW-ONLY   │
-  └─────┬──────────────────┘    │  scope     risk/bloat/   │
-        │                       │            regression    │
-        │                       └──────────────────────────┘
-        │
-        │  ┌─────────────────────────────────────────────────┐
-        │  │              DEVELOPMENT TEAM                    │
-        │  │              All: Codex / gpt-5.1-codex-mini    │
-        │  ├─────────────────────────────────────────────────┤
-        ├──│  codex-dev-a     Rust Core Dev                  │
-        │  │                  scope: proto/**, rust_core/**  │
-        │  │                                                 │
-        ├──│  codex-dev-b     Go Surface Dev                 │
-        │  │                  scope: cmd/**, gRPC, daemon    │
-        │  │                                                 │
-        ├──│  codex-dev-c     Docs + Tests Dev               │
-        │  │                  scope: docs/blueprint/**       │
-        │  │                                                 │
-        └──│  codex-dev-d     General Dev / Support          │
-           │                  scope: as assigned             │
-           ├─────────────────────────────────────────────────┤
-           │              QUALITY                            │
-           ├─────────────────────────────────────────────────┤
-           │  codex-tester-1  Tester                         │
-           │                  scope: go test / smoke /       │
-           │                         acceptance / regression │
-           └─────────────────────────────────────────────────┘
-```
-
-**Set up this team by pasting this prompt:**
+This is the actual prompt used to bootstrap a large-scale project. No structured spec, no YAML — just plain language:
 
 ```
-Set up and start an AI team for this project with the following structure.
-Use the provider registry defaults unless a model is explicitly specified.
-Persist the team to `.ai/state/team.yaml`, then spawn the workers and
-show me worker status.
-
-Orchestrator: Codex (default model)
-
-Team Lead (PM / Tech Lead):
-* 1 worker
-* provider: Codex
-* model: default
-* authority: write (planning/execution coordination)
-
-Reports to PM/Tech Lead:
-
-1. Rust Core Dev
-   * 1 worker
-   * provider: Codex
-   * model: gpt-5.1-codex-mini
-   * scope: proto/**, internal/rust_core/**
-
-2. Go Surface Dev
-   * 1 worker
-   * provider: Codex
-   * model: gpt-5.1-codex-mini
-   * scope: cmd/**, daemon wiring, gRPC client integration
-
-3. Docs + Tests Dev
-   * 1 worker
-   * provider: Codex
-   * model: gpt-5.1-codex-mini
-   * scope: docs/blueprint/**, acceptance/parity test docs/scripts
-
-4. General Dev / Support
-   * 1 worker
-   * provider: Codex
-   * model: gpt-5.1-codex-mini
-   * scope: non-overlapping implementation slices as assigned
-
-5. Tester
-   * 1 worker
-   * provider: Codex
-   * model: gpt-5.1-codex-mini
-   * scope: go test / smoke / acceptance / regression verification
-
-Peer to PM/Tech Lead (independent, advisory only):
-* 1 worker
-* role: Codebase Review / Analysis
-* provider: Gemini
-* model: gemini-2.5-pro
-* authority: review-only (no coding)
-* reports_to: Orchestrator directly
-* scope: risk / regression / scope-drift / bloat analysis only
+For all your mundane straight shoot tasks use codex with model gpt-5.1-codex-mini;
+the model is great worker not good on reasoning.
+Use PM as codex default. Use gemini default for research and or discussions/review.
+Never use gemini to code.
+You can use up to 10 coders and testers, use more if you need to. Use your PM wisely.
 ```
 
-The orchestrator will parse this into `team.yaml`, write the provider/model config, spawn all workers, and display their status. No commands to memorize.
+The orchestrator parsed this into a team structure, wrote `team.yaml`, and spawned the initial workers. No `/configure-team` command needed — the system understood the intent, the provider constraints, and the model routing policy from natural language.
 
-### Example: Large-Scale Multi-Provider Team (~80 workers)
+As the project evolved, the cap was raised:
 
-The same infographic style scales to production-grade teams. This example shows a real roster with tiered models, elastic reserves, and cross-provider advisory layers.
+```
+You're authorized to scale workers as needed. Spin up as many as the batch requires
+to run parallel at scale. Use your judgment on pool sizes.
+```
+
+The orchestrator scaled from ~10 workers to 80+ across batches, adding pools as complexity grew.
+
+### What the orchestrator built from that prompt
 
 ```
 ╔══════════════════════════════════════════════════════════════════════╗
@@ -567,7 +483,7 @@ The same infographic style scales to production-grade teams. This example shows 
   ┌───────────────────────────────────────────────────────────────────┐
   │  PM / TECH LEAD                                                   │
   │  codex-pm-tl-1                                                    │
-  │  Codex / gpt-5          authority: WRITE                         │
+  │  Codex / default         authority: WRITE                         │
   │  scope: planning, scope cuts, merge order, integration decisions  │
   └───────────┬───────────────────────────────────────────────────────┘
               │
@@ -602,8 +518,13 @@ The same infographic style scales to production-grade teams. This example shows 
   │  ELASTIC RESERVE               gpt-5.1-codex-mini                │
   │    codex-mini-reserve-01..20   ad hoc burst capacity, bounded    │
   │                                                                   │
+  │  REPO HYGIENE (dedicated)      gpt-5.1-codex-mini                │
+  │    codex-hygiene-1             lint, formatting, dead code,      │
+  │                                stale branches, CI green checks   │
+  │                                                                   │
   ├───────────────────────────────────────────────────────────────────┤
   │                    GEMINI ADVISORY (under PM)                      │
+  │                    Rule: NEVER codes. Review/research only.        │
   ├───────────────────────────────────────────────────────────────────┤
   │                                                                   │
   │  PM VERIFICATION REVIEWER      gemini-2.5-pro                    │
@@ -617,22 +538,56 @@ The same infographic style scales to production-grade teams. This example shows 
   │                                                                   │
   │  DEV POOL (bounded)            gemini-2.5-pro                    │
   │    gemini-dev-01..20           low-trust, exact mechanical tasks  │
+  │                                (no code production — review only) │
   │                                                                   │
   └───────────────────────────────────────────────────────────────────┘
 
-  MODEL ALLOCATION POLICY
-  ───────────────────────
-  gpt-5           PM lead, blueprint architect
-  gpt-5.2         specialist pair only (hard reasoning)
-  gpt-5.1-mini    bulk coding, tests, ops, helpers, reserve
-  gemini-2.5-pro  reviewers, research, bounded dev tasks
+  MODEL ALLOCATION POLICY (derived from prompt)
+  ─────────────────────────────────────────────
+  Codex default    PM lead only (reasoning + coordination)
+  gpt-5            blueprint architect
+  gpt-5.2          specialist pair only (hard reasoning, use sparingly)
+  gpt-5.1-mini     bulk coding, tests, ops, helpers, reserve, hygiene
+  gemini-2.5-pro   reviewers, research, discussion — NEVER codes
 
   QUICK TOTALS
   ─────────────
   Codex PM lead ............  1     Codex gpt-5 blueprint ...  1
-  Codex gpt-5.2 specialists  2     Codex mini workers ...... ~55
-  Gemini reviewers/advisory   4     Gemini dev pool ......... 20
+  Codex gpt-5.2 specialists  2     Codex mini workers ...... ~56
+  Gemini reviewers/advisory   4     Gemini review pool ...... 20
+  Dedicated hygiene worker    1
+                                    ────────────────────────────
+                                    Total: ~85 workers at peak
 ```
+
+### How it grew
+
+The project started with the loose prompt above. Here's how the orchestrator scaled it:
+
+| Phase | Workers | What happened |
+|-------|---------|---------------|
+| **Kickoff** | ~8 | PM + 4 devs + 1 tester + 1 Gemini reviewer + 1 hygiene worker |
+| **First scale-up** | ~25 | Added core/integration pools as scope expanded |
+| **Full parallel** | ~55 | Feature pool, elastic reserve activated for batch sprints |
+| **Peak batch** | ~85 | All pools active, 20-worker Gemini review pool for cross-cutting audit |
+| **Steady state** | ~30 | Reserve scaled down, specialists called on-demand |
+
+Key decisions the orchestrator made from that initial prompt:
+- **Codex default for PM** — "Use PM as codex default" meant the PM lead gets the full-capability model for reasoning
+- **gpt-5.1-codex-mini for everything else** — "mundane straight shoot tasks" mapped to bulk coding, testing, ops
+- **Gemini never codes** — "Never use gemini to code" became a hard model routing policy; Gemini workers get `review` and `research` ticket types only
+- **Dedicated hygiene worker** — "explicitly ask to have a separate small model to just do repo hygiene" became `codex-hygiene-1` with its own ticket scope
+- **Elastic scaling** — "use more if you need to" was interpreted as authorization to add workers up to the batch plan's parallelism ceiling
+
+### You can start simpler
+
+You don't need 85 workers. A single prompt works for small teams too:
+
+```
+Set up a team: 2 Codex devs, 1 Gemini reviewer. Use gpt-5.1-codex-mini for coding.
+```
+
+The orchestrator builds the same structure — just smaller. Ticket contracts, collision checks, and approval tiers work identically whether you have 3 workers or 80.
 
 ---
 
@@ -651,6 +606,7 @@ The same infographic style scales to production-grade teams. This example shows 
 | `ai git-sync` | Commit canonical state to git | Whitelisted `.ai/` files only |
 | `ai rehydrate-db` | Rebuild SQLite from YAML | `.ai_runtime/ai.db` only |
 | `ai migrate` | Apply new template files | Adds missing files, never overwrites |
+| `ai migrate --update-registries` | Merge new commands/intents/capabilities | Append-only, updates AGENTS.md |
 | `ai export-memory` | Export canonical memory pack | `.ai_runtime/` only |
 | `ai import-memory --in PATH` | Import canonical memory pack | `.ai_runtime/` only |
 | `ai memory export` | Export session memory pack | `.ai_runtime/` only |
